@@ -29,7 +29,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. Context and rate-limit percentages shift color as usage crosses warning and critical thresholds
   3. With stdin fields absent or null (no effort, no rate limits, no context), the corresponding segments and their separators disappear entirely — no placeholders, no errors
   4. The script always exits 0 and emits nothing to stderr, even on malformed or empty input; line 1 renders in every case
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Tracer: framed two-line status from the full stdin payload (segments, thresholds, countdowns)
+- [ ] 01-02-PLAN.md — Hide/zero/worst-case states, fixture set, and the never-fail test harness
 
 ### Phase 2: Git Segment
 **Goal**: Line 1 shows the full git situation at a glance in any repo state, without slowing the render
@@ -75,7 +79,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Core Status Line from Stdin | 0/? | Not started | - |
+| 1. Core Status Line from Stdin | 0/2 | Not started | - |
 | 2. Git Segment | 0/? | Not started | - |
 | 3. Install & Dual-Environment Validation | 0/? | Not started | - |
 | 4. Fable Weekly f() Segment | 0/? | Not started | - |
