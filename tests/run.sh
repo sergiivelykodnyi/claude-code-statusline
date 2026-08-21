@@ -296,7 +296,28 @@ for s in $(printf '%s\n' "$FULL_RAW" \
 done
 check_ok "git palette purity: full-form render only 0m/2m/31m/32m/33m/34m/35m/36m" $r
 
-# --- 9. Optional shellcheck advisory (never fails the harness) --------------
+# --- 9. Render latency budget (PORT-02, D-28/D-29) ---------------------------
+# 10 sequential uncached full renders must fit in 2 wall-clock seconds:
+# that bounds the average at <=200ms per render — well under the ~300ms
+# debounce (roadmap criterion 4) — while whole-second date +%s granularity
+# (BSD/GNU portable; no GNU-only nanosecond format) plus ~0.5s actual keeps
+# the check flake-proof on slow CI. The payload is materialized once so jq
+# cost outside the script is not measured: the measured unit is exactly one
+# full render (1 jq pass inside the script + the git calls). Each render
+# does real uncached git work against the full-form repo (D-29) — no cache,
+# no warm-up, no skip logic: a genuinely slow script must fail here.
+LATENCY_PAYLOAD="$TESTTMP/latency.json"
+jq --arg d "$W" '.workspace.current_dir = $d' tests/fixtures/full.json > "$LATENCY_PAYLOAD"
+t0=$(date +%s)
+for i in 1 2 3 4 5 6 7 8 9 10; do
+  /bin/bash "$SL" < "$LATENCY_PAYLOAD" > /dev/null 2>&1
+done
+t1=$(date +%s)
+elapsed=$(( t1 - t0 ))
+[ "$elapsed" -le 2 ]
+check_ok "latency: 10 full renders in ${elapsed}s (budget 2s)" $?
+
+# --- 10. Optional shellcheck advisory (never fails the harness) --------------
 
 if command -v shellcheck > /dev/null 2>&1; then
   printf 'INFO shellcheck advisory (non-failing):\n'
