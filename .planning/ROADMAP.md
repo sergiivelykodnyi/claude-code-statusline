@@ -33,12 +33,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. With stdin fields absent or null (no effort, no rate limits, no context), the corresponding segments and their separators disappear entirely — no placeholders, no errors
   4. The script always exits 0 and emits nothing to stderr, even on malformed or empty input; line 1 renders in every case
 
-**Plans**: 2 plans
+**Plans**: 1/2 plans executed
 
 Plans:
 **Wave 1**
 
-- [ ] 01-01-PLAN.md — Tracer: framed two-line status from the full stdin payload (segments, thresholds, countdowns)
+- [x] 01-01-PLAN.md — Tracer: framed two-line status from the full stdin payload (segments, thresholds, countdowns)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -97,7 +97,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Core Status Line from Stdin | 0/2 | Not started | - |
+| 1. Core Status Line from Stdin | 1/2 | In Progress|  |
 | 2. Git Segment | 0/? | Not started | - |
 | 3. Install & Dual-Environment Validation | 0/? | Not started | - |
 | 4. Fable Weekly f() Segment | 0/? | Not started | - |

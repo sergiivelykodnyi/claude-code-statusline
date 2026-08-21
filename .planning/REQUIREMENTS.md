@@ -9,9 +9,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Session Info (Line 1)
 
-- [ ] **SESH-01**: Status line shows the model display name with any `(1M context)`-style suffix stripped (e.g. `Opus 5`)
+- [x] **SESH-01**: Status line shows the model display name with any `(1M context)`-style suffix stripped (e.g. `Opus 5`)
 - [ ] **SESH-02**: Status line shows the current reasoning effort in parentheses (e.g. `(high)`), hidden when the model doesn't report effort
-- [ ] **SESH-03**: Status line shows the basename of the directory Claude is running in
+- [x] **SESH-03**: Status line shows the basename of the directory Claude is running in
 
 ### Git Status (Line 1)
 
@@ -25,13 +25,13 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Context Usage (Line 2)
 
 - [ ] **CTX-01**: Status line shows context usage as `pct/used_tokens/window_size` (e.g. `10%/100k/1M`) using stdin `context_window` fields
-- [ ] **CTX-02**: Token and window numbers are shortened with k/M units (e.g. `100k`, `1M`)
+- [x] **CTX-02**: Token and window numbers are shortened with k/M units (e.g. `100k`, `1M`)
 
 ### Rate Limits (Line 2)
 
-- [ ] **LIM-01**: Status line shows 5-hour limit usage as `pct/5h` with a reset countdown (e.g. `50%/5h (2h:50m)`) from stdin `rate_limits.five_hour`
-- [ ] **LIM-02**: Status line shows weekly limit usage as `pct/1w` with a reset countdown (e.g. `15%/1w (3d:5h:57m)`) from stdin `rate_limits.seven_day`
-- [ ] **LIM-03**: Reset countdowns are computed with pure epoch arithmetic (no `date -d`/`date -v`) and formatted as `d:h:m` / `h:m`
+- [x] **LIM-01**: Status line shows 5-hour limit usage as `pct/5h` with a reset countdown (e.g. `50%/5h (2h:50m)`) from stdin `rate_limits.five_hour`
+- [x] **LIM-02**: Status line shows weekly limit usage as `pct/1w` with a reset countdown (e.g. `15%/1w (3d:5h:57m)`) from stdin `rate_limits.seven_day`
+- [x] **LIM-03**: Reset countdowns are computed with pure epoch arithmetic (no `date -d`/`date -v`) and formatted as `d:h:m` / `h:m`
 - [ ] **LIM-04**: Rate-limit segments are hidden when the corresponding stdin fields are absent (API-key auth, pre-first-response, older Claude Code)
 
 ### Fable Weekly (Line 2)
@@ -43,8 +43,8 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Presentation
 
-- [ ] **PRES-01**: Output is a two-line layout framed with `╭─` / `╰─` box-drawing characters
-- [ ] **PRES-02**: Segments are ANSI-colorized
+- [x] **PRES-01**: Output is a two-line layout framed with `╭─` / `╰─` box-drawing characters
+- [x] **PRES-02**: Segments are ANSI-colorized
 - [ ] **PRES-03**: Context and rate-limit percentages shift color as usage grows (normal → warning → critical thresholds)
 - [ ] **PRES-04**: Segments with no data are hidden entirely, including their separators — no placeholders
 
@@ -89,17 +89,17 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SESH-01 | Phase 1 | Pending |
+| SESH-01 | Phase 1 | Complete |
 | SESH-02 | Phase 1 | Pending |
-| SESH-03 | Phase 1 | Pending |
+| SESH-03 | Phase 1 | Complete |
 | CTX-01 | Phase 1 | Pending |
-| CTX-02 | Phase 1 | Pending |
-| LIM-01 | Phase 1 | Pending |
-| LIM-02 | Phase 1 | Pending |
-| LIM-03 | Phase 1 | Pending |
+| CTX-02 | Phase 1 | Complete |
+| LIM-01 | Phase 1 | Complete |
+| LIM-02 | Phase 1 | Complete |
+| LIM-03 | Phase 1 | Complete |
 | LIM-04 | Phase 1 | Pending |
-| PRES-01 | Phase 1 | Pending |
-| PRES-02 | Phase 1 | Pending |
+| PRES-01 | Phase 1 | Complete |
+| PRES-02 | Phase 1 | Complete |
 | PRES-03 | Phase 1 | Pending |
 | PRES-04 | Phase 1 | Pending |
 | PORT-03 | Phase 1 | Pending |
@@ -120,6 +120,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FAB-04 | Phase 4 | Pending |
 
 **Coverage:**
+
 - v1 requirements: 29 total
 - Mapped to phases: 29
 - Unmapped: 0 ✓

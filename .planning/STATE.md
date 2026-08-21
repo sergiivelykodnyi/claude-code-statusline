@@ -1,18 +1,18 @@
 ---
 gsd_state_version: 1.0
-current_phase: 1
-current_phase_name: core-status-line-from-stdin
+current_phase: 01
+current_phase_name: Core Status Line from Stdin
 status: executing
-stopped_at: Phase 1 context gathered
-last_updated: "2026-08-21T18:25:08.194Z"
+stopped_at: Completed 01-01-PLAN.md
+last_updated: "2026-08-21T18:35:26.157Z"
 last_activity: 2026-08-21
-last_activity_desc: Roadmap created (4 phases, 29/29 requirements mapped)
-state_head: 00650c6749cd17fa115c479c3a6c1290ce94710d
+last_activity_desc: Phase 01 execution started
+state_head: 4c6630c38770c6f65e1dcfa1717f75dded95f288
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 2
-  completed_plans: 0
+  completed_plans: 1
   percent: 0
 ---
 
@@ -23,14 +23,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-21)
 
 **Core value:** One glance at the terminal tells you everything about the session: which model at which effort, where you are in git, and how much context and rate limit you have left before things reset.
-**Current focus:** Phase 1 — Core Status Line from Stdin
+**Current focus:** Phase 01 — Core Status Line from Stdin
 
 ## Current Position
 
-Phase: 1 (core-status-line-from-stdin) — READY TO EXECUTE
-Plan: 0 of TBD in current phase
+Phase: 01 (Core Status Line from Stdin) — EXECUTING
+Plan: 2 of 2
 Status: Ready to execute
-Last activity: 2026-08-21 — Roadmap created (4 phases, 29/29 requirements mapped)
+Last activity: 2026-08-21 — Phase 01 execution started
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -54,6 +54,11 @@ Progress: [░░░░░░░░░░] 0%
 - Trend: -
 
 *Updated after each plan completion*
+**Per-Plan Metrics:**
+
+| Plan | Duration | Tasks | Files |
+|------|----------|-------|-------|
+| Phase 01 P01 | 5 min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -65,6 +70,8 @@ Recent decisions affecting current work:
 - [Init]: Rate-limit segments read stdin `rate_limits.five_hour`/`.seven_day` — no API call needed for 5h/1w (research resolved PROJECT.md's open question)
 - [Init]: `f()` Fable weekly is the sole external dependency — isolated behind an adapter seam, cached, fail-silent, deferred to Phase 4
 - [Init]: PORT-02 (render-latency budget) assigned to Phase 2, where the last render-path subprocess (git collector) lands
+- [Phase 01]: Threshold color spans NN% (number + percent sign) with reset before labels, identical on all three percentage sites — resolved plan action-text/verify contradiction in favor of the binding verify
+- [Phase 01]: SGR 2 (faint) chosen for dim frame/separators — theme-adaptive per D-02, visual confirmation routed to end-of-phase UAT
 
 ### Pending Todos
 
@@ -85,6 +92,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-08-21T17:57:40.701Z
-Stopped at: Phase 1 context gathered
-Resume file: .planning/phases/01-core-status-line-from-stdin/01-CONTEXT.md
+Last session: 2026-08-21T18:35:26.150Z
+Stopped at: Completed 01-01-PLAN.md
+Resume file: None
