@@ -58,12 +58,12 @@ Plans:
   4. A full render completes well under the ~300ms debounce, using a single jq pass and one primary git status call
   5. Layout correction: the `╭─ ` and `╰─ ` frame prefixes are removed — both lines render without leading box-drawing frame characters, with all other segments, separators, and colors unchanged
 
-**Plans**: 2 plans
+**Plans**: 1/2 plans executed
 
 Plans:
 **Wave 1**
 
-- [ ] 02-01-PLAN.md — Git segment end-to-end (seg_git, semantic per-marker colors, edge states) + frame removal, existing harness kept green
+- [x] 02-01-PLAN.md — Git segment end-to-end (seg_git, semantic per-marker colors, edge states) + frame removal, existing harness kept green
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -108,6 +108,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Core Status Line from Stdin | 2/2 | Complete    | 2026-08-21 |
-| 2. Git Segment | 0/2 | Not started | - |
+| 2. Git Segment | 1/2 | In Progress|  |
 | 3. Install & Dual-Environment Validation | 0/? | Not started | - |
 | 4. Fable Weekly f() Segment | 0/? | Not started | - |

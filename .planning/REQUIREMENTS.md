@@ -15,11 +15,11 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Git Status (Line 1)
 
-- [ ] **GIT-01**: In a git repo, status line shows the current branch prefixed with `⎇`; outside a repo the whole git segment is hidden
-- [ ] **GIT-02**: Branch name gets a `*` suffix when the working tree has changes or untracked files
-- [ ] **GIT-03**: Status line shows `≡` when the branch has an upstream, `≢` when it has none
-- [ ] **GIT-04**: Status line shows `↓N` for commits on the remote not yet pulled and `↑N` for local commits not yet pushed, hidden when zero
-- [ ] **GIT-05**: Status line shows `#N` for the stash count, hidden when zero
+- [x] **GIT-01**: In a git repo, status line shows the current branch prefixed with `⎇`; outside a repo the whole git segment is hidden
+- [x] **GIT-02**: Branch name gets a `*` suffix when the working tree has changes or untracked files
+- [x] **GIT-03**: Status line shows `≡` when the branch has an upstream, `≢` when it has none
+- [x] **GIT-04**: Status line shows `↓N` for commits on the remote not yet pulled and `↑N` for local commits not yet pushed, hidden when zero
+- [x] **GIT-05**: Status line shows `#N` for the stash count, hidden when zero
 - [ ] **GIT-06**: Git segment renders correctly (or degrades to hidden parts) in edge states: clean repo, dirty repo, detached HEAD, branch with no upstream, not a repo
 
 ### Context Usage (Line 2)
@@ -103,11 +103,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PRES-03 | Phase 1 | Complete |
 | PRES-04 | Phase 1 | Complete |
 | PORT-03 | Phase 1 | Complete |
-| GIT-01 | Phase 2 | Pending |
-| GIT-02 | Phase 2 | Pending |
-| GIT-03 | Phase 2 | Pending |
-| GIT-04 | Phase 2 | Pending |
-| GIT-05 | Phase 2 | Pending |
+| GIT-01 | Phase 2 | Complete |
+| GIT-02 | Phase 2 | Complete |
+| GIT-03 | Phase 2 | Complete |
+| GIT-04 | Phase 2 | Complete |
+| GIT-05 | Phase 2 | Complete |
 | GIT-06 | Phase 2 | Pending |
 | PORT-02 | Phase 2 | Pending |
 | PORT-01 | Phase 3 | Pending |
