@@ -1,0 +1,1 @@
+{"session_id":"fix-full","model":{"display_name":"Opus 5 (1M context)"},"effort":{"level":"high"},"workspace":{"current_dir":"/tmp/myproject"},"context_window":{"used_percentage":null,"total_input_tokens":0,"context_window_size":200000}}
