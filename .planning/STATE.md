@@ -3,11 +3,11 @@ gsd_state_version: 1.0
 current_phase: 2
 current_phase_name: Git Segment
 status: planning
-stopped_at: Phase 01 complete, ready to plan Phase 2
-last_updated: "2026-08-21T19:07:15.668Z"
+stopped_at: Phase 2 context gathered
+last_updated: "2026-08-21T19:46:56.827Z"
 last_activity: 2026-08-21
 last_activity_desc: Phase 01 complete, transitioned to Phase 2
-state_head: e66f80b9331417beee1af31e330d28af08df2600
+state_head: 90e446445b0b7d41b9b8c39748b4962ad11de1e2
 progress:
   total_phases: 4
   completed_phases: 1
@@ -85,6 +85,10 @@ None yet.
 - [Phase 3]: Docker Sandbox symlink/`~/.claude` mount behavior is unvalidated — a host-absolute symlink may dangle in the container; verify empirically before finalizing the README install story
 - [Phase 4]: OAuth usage endpoint is undocumented and reported unstable — confirm window key naming and `utilization` scale (0-1 vs 0-100) during phase planning
 
+### Roadmap Evolution
+
+- Phase 2 edited: edited fields: title-line, success_criteria (layout correction: remove ╭─/╰─ frame prefixes)
+
 ## Deferred Items
 
 Items acknowledged and deferred at milestone close, most recent first:
@@ -95,6 +99,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-08-21T19:07:15Z
-Stopped at: Phase 01 complete, ready to plan Phase 2
-Resume file: None
+Last session: 2026-08-21T19:46:56.772Z
+Stopped at: Phase 2 context gathered
+Resume file: .planning/phases/02-git-segment/02-CONTEXT.md
