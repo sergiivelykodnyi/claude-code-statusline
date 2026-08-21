@@ -1,5 +1,5 @@
 #!/bin/bash
-# statusline.sh — two-line framed Claude Code status line.
+# statusline.sh — two-line flush-left Claude Code status line (D-21: frameless).
 # Reads the Claude Code JSON payload on stdin, prints two ANSI-colorized
 # lines to stdout, always exits 0. bash 3.2-compatible (macOS /bin/bash).
 # No set -e / set -u: an aborting probe would blank the whole line.
@@ -11,6 +11,7 @@ RED=$'\033[31m'
 GREEN=$'\033[32m'
 YELLOW=$'\033[33m'
 BLUE=$'\033[34m'
+MAGENTA=$'\033[35m'
 CYAN=$'\033[36m'
 
 # --- Pure helpers -----------------------------------------------------------
@@ -80,6 +81,52 @@ seg_dir() {
   printf '%s' "${BLUE}${d}${RESET}"
 }
 
+# Git segment: magenta "⎇ branch", yellow dirty star, green/red sync symbol,
+# yellow behind / green ahead counts, dim stash count — hidden entirely
+# outside a repo (GIT-01..05, D-17..D-20, D-24..D-27). One primary status
+# call parsed below, plus one stash count; all read-only and lock-free via
+# GIT_OPTIONAL_LOCKS=0, uncached per D-29 (PORT-02).
+seg_git() {
+  [ -n "$DIR" ] || return 0                   # stdin workspace dir only, never $PWD
+  local status line label upstream=0 detached=0 dirty=0 ahead=0 behind=0 ab stash sha out
+  status=$(GIT_OPTIONAL_LOCKS=0 git -C "$DIR" status --porcelain=v2 --branch 2>/dev/null) || return 0
+  # bash-3.2-safe parse: here-string keeps the loop in this shell (a pipe
+  # would fork a subshell and lose every variable set inside it).
+  while IFS= read -r line; do
+    case "$line" in
+      '# branch.head '*)     label=${line#'# branch.head '} ;;
+      '# branch.upstream '*) upstream=1 ;;
+      '# branch.ab '*)                        # "+A -B" -> ahead A, behind B
+        ab=${line#'# branch.ab '}
+        ahead=${ab%% *};  ahead=${ahead#+}
+        behind=${ab##* }; behind=${behind#-} ;;
+      '#'*) ;;                                # other headers (branch.oid, ...)
+      '') ;;
+      *) dirty=1 ;;                           # any entry line -> dirty (GIT-02)
+    esac
+  done <<< "$status"
+  [ -n "$label" ] || return 0                 # defensive: never render a bare glyph
+  [ -z "$ahead" ]  && ahead=0                 # guard empties before arithmetic
+  [ -z "$behind" ] && behind=0
+  if [ "$label" = '(detached)' ]; then        # D-24: short SHA as the label
+    detached=1
+    sha=$(GIT_OPTIONAL_LOCKS=0 git -C "$DIR" rev-parse --short HEAD 2>/dev/null)
+    [ -n "$sha" ] && label=$sha               # fallback: keep the literal, never empty
+  fi
+  stash=$(GIT_OPTIONAL_LOCKS=0 git -C "$DIR" rev-list --walk-reflogs --count refs/stash 2>/dev/null)
+  [ -z "$stash" ] && stash=0                  # no stash ref -> 0
+  out="${MAGENTA}⎇ ${label}${RESET}"
+  [ "$dirty" -eq 1 ] && out="${out}${YELLOW}*${RESET}"
+  if [ "$detached" -eq 0 ]; then              # D-25: no sync symbol when detached
+    if [ "$upstream" -eq 1 ]; then out="${out} ${GREEN}≡${RESET}"
+    else out="${out} ${RED}≢${RESET}"; fi     # red is the user's explicit choice (D-19)
+  fi
+  [ "$behind" -gt 0 ] && out="${out} ${YELLOW}↓${behind}${RESET}"
+  [ "$ahead" -gt 0 ]  && out="${out} ${GREEN}↑${ahead}${RESET}"
+  [ "$stash" -gt 0 ]  && out="${out} ${DIM}#${stash}${RESET}"
+  printf '%s' "$out"
+}
+
 # Context usage pct/tokens/window; renders only when the window size is
 # known (CTX-01/02, D-05, D-07, PRES-03).
 seg_context() {
@@ -116,7 +163,7 @@ seg_1w() {
 main() {
   # Ingestion: one jq pass, @sh-quoted, // "" on every field. Do not branch
   # on jq's exit code (empty stdin exits 0 with no output).
-  local input vars sep model_seg dir_seg body
+  local input vars sep model_seg dir_seg git_seg body
   input=$(cat)
   vars=$(printf '%s' "$input" | jq -r '@sh "
     MODEL=\(.model.display_name // "")
@@ -138,16 +185,18 @@ main() {
 
   model_seg=$(seg_model_effort)
   dir_seg=$(seg_dir)
-  # Phase 2 seam: the git segment appends to dir_seg with a plain space
-  # (dir_seg="$dir_seg $git_seg") before this join.
+  git_seg=$(seg_git)
+  # Phase 2: the git segment is attached to the directory with a plain
+  # space; empty outside a repo, so no trailing space leaks (GIT-01).
+  dir_seg="$dir_seg${git_seg:+ $git_seg}"
   body=$(join_segments "$sep" "$model_seg" "$dir_seg")
-  LINE1="${DIM}╭─${RESET}${body:+ $body}${RESET}"
+  LINE1="${body}${RESET}"
 
   body=$(join_segments "$sep" "$(seg_context)" "$(seg_5h)" "$(seg_1w)")
   if [ -n "$body" ]; then
-    LINE2="${DIM}╰─${RESET} ${body}${RESET}"
+    LINE2="${body}${RESET}"
   else
-    LINE2="${DIM}╰─${RESET}"                  # bare bottom frame (D-11)
+    LINE2=""                                  # blank second line (D-22)
   fi
 
   printf '%s\n' "$LINE1"

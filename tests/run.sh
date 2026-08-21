@@ -97,13 +97,18 @@ run_fixture() {
 
 HERE=${PWD##*/}   # D-13 fallback renders the harness's own PWD basename
 
-run_fixture full           "╭─ Opus 5 (high) · myproject" "╰─ 10%/100k/1M · 50%/5h (now) · 15%/1w (now)"
-run_fixture no-effort      "╭─ Opus 5 · myproject"        "╰─ 10%/100k/1M · 50%/5h (now) · 15%/1w (now)"
-run_fixture no-rate-limits "╭─ Opus 5 (high) · myproject" "╰─ 10%/100k/1M"
-run_fixture only-five-hour "╭─ Opus 5 (high) · myproject" "╰─ 10%/100k/1M · 50%/5h (now)"
-run_fixture null-context   "╭─ Opus 5 (high) · myproject" "╰─ 0%/0/200k"
-run_fixture empty          "╭─ $HERE"                     "╰─"
-run_fixture malformed      "╭─ $HERE"                     "╰─"
+run_fixture full           "Opus 5 (high) · myproject" "10%/100k/1M · 50%/5h (now) · 15%/1w (now)"
+run_fixture no-effort      "Opus 5 · myproject"        "10%/100k/1M · 50%/5h (now) · 15%/1w (now)"
+run_fixture no-rate-limits "Opus 5 (high) · myproject" "10%/100k/1M"
+run_fixture only-five-hour "Opus 5 (high) · myproject" "10%/100k/1M · 50%/5h (now)"
+run_fixture null-context   "Opus 5 (high) · myproject" "0%/0/200k"
+run_fixture empty          "$HERE"                     ""
+run_fixture malformed      "$HERE"                     ""
+
+# D-22 two-line invariant: an empty line 2 is a printed blank line, not a
+# missing line — line-equality above cannot tell those apart, wc -l can.
+check_eq "empty: exactly 2 output lines (D-22)" "2" \
+  "$(/bin/bash "$SL" < tests/fixtures/empty.json | wc -l | tr -d '[:space:]')"
 
 # --- 4. Live countdown ------------------------------------------------------
 
@@ -130,12 +135,12 @@ done
 r=0
 for s in $(/bin/bash "$SL" < tests/fixtures/full.json \
              | grep -o "${ESC}\[[0-9;]*m" | sed "s/${ESC}\[//" | sort -u); do
-  case " 0m 2m 31m 32m 33m 34m 36m " in
+  case " 0m 2m 31m 32m 33m 34m 35m 36m " in
     *" $s "*) ;;
     *) r=1; printf '  unexpected SGR sequence: %s\n' "$s" ;;
   esac
 done
-check_ok "palette purity: only 0m/2m/31m/32m/33m/34m/36m in output" $r
+check_ok "palette purity: only 0m/2m/31m/32m/33m/34m/35m/36m in output" $r
 
 # --- 7. Injection probe (T-01-01 regression) --------------------------------
 
