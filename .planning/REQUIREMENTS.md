@@ -89,13 +89,41 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (populated during roadmap creation) | | |
+| SESH-01 | Phase 1 | Pending |
+| SESH-02 | Phase 1 | Pending |
+| SESH-03 | Phase 1 | Pending |
+| CTX-01 | Phase 1 | Pending |
+| CTX-02 | Phase 1 | Pending |
+| LIM-01 | Phase 1 | Pending |
+| LIM-02 | Phase 1 | Pending |
+| LIM-03 | Phase 1 | Pending |
+| LIM-04 | Phase 1 | Pending |
+| PRES-01 | Phase 1 | Pending |
+| PRES-02 | Phase 1 | Pending |
+| PRES-03 | Phase 1 | Pending |
+| PRES-04 | Phase 1 | Pending |
+| PORT-03 | Phase 1 | Pending |
+| GIT-01 | Phase 2 | Pending |
+| GIT-02 | Phase 2 | Pending |
+| GIT-03 | Phase 2 | Pending |
+| GIT-04 | Phase 2 | Pending |
+| GIT-05 | Phase 2 | Pending |
+| GIT-06 | Phase 2 | Pending |
+| PORT-02 | Phase 2 | Pending |
+| PORT-01 | Phase 3 | Pending |
+| PORT-04 | Phase 3 | Pending |
+| DOCS-01 | Phase 3 | Pending |
+| DOCS-02 | Phase 3 | Pending |
+| FAB-01 | Phase 4 | Pending |
+| FAB-02 | Phase 4 | Pending |
+| FAB-03 | Phase 4 | Pending |
+| FAB-04 | Phase 4 | Pending |
 
 **Coverage:**
-- v1 requirements: 25 total
-- Mapped to phases: 0
-- Unmapped: 25 ⚠️
+- v1 requirements: 29 total
+- Mapped to phases: 29
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-08-21*
-*Last updated: 2026-08-21 after initial definition*
+*Last updated: 2026-08-21 after roadmap creation (traceability populated; corrected v1 count from 25 to 29)*
