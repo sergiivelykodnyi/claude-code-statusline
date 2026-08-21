@@ -32,6 +32,18 @@ shorten_num() {
   fi
 }
 
+# fmt_duration DELTA_SECONDS -> countdown text (D-09/D-10: only leading zero
+# units drop, past resets print "now" — caller adds the parens).
+fmt_duration() {
+  local delta=$1 d h m
+  if [ "$delta" -le 0 ]; then printf 'now'; return; fi      # D-10
+  if [ "$delta" -lt 60 ]; then printf '<1m'; return; fi
+  d=$(( delta / 86400 )); h=$(( delta % 86400 / 3600 )); m=$(( delta % 3600 / 60 ))
+  if [ "$d" -gt 0 ]; then printf '%sd:%sh:%sm' "$d" "$h" "$m"
+  elif [ "$h" -gt 0 ]; then printf '%sh:%sm' "$h" "$m"
+  else printf '%sm' "$m"; fi
+}
+
 # pct_color INT -> echoes the threshold color; caller wraps ONLY the number
 # (D-03/D-04/D-05: green below 70, yellow at >=70, red at >=90).
 pct_color() {
@@ -75,8 +87,28 @@ seg_context() {
   local pct=${CTX_PCT%.*} tok=$CTX_TOK
   [ -z "$pct" ] && pct=0                      # guard before arithmetic
   [ -z "$tok" ] && tok=0
-  printf '%s%s%s%%/%s/%s' "$(pct_color "$pct")" "$pct" "$RESET" \
+  printf '%s%s%%%s/%s/%s' "$(pct_color "$pct")" "$pct" "$RESET" \
     "$(shorten_num "$tok")" "$(shorten_num "$CTX_WIN")"
+}
+
+# 5-hour rate-limit segment pct/5h (countdown) (LIM-01, D-05, D-07, D-09/D-10).
+seg_5h() {
+  [ -n "$P5_PCT" ] || return 0
+  local pct=${P5_PCT%.*} out
+  [ -z "$pct" ] && pct=0                      # guard before arithmetic
+  out="$(pct_color "$pct")${pct}%${RESET}/5h"
+  [ -n "$P5_RST" ] && out="${out} ($(fmt_duration $(( P5_RST - NOW ))))"
+  printf '%s' "$out"
+}
+
+# Weekly rate-limit segment pct/1w (countdown) (LIM-02, D-05, D-07, D-09/D-10).
+seg_1w() {
+  [ -n "$P7_PCT" ] || return 0
+  local pct=${P7_PCT%.*} out
+  [ -z "$pct" ] && pct=0                      # guard before arithmetic
+  out="$(pct_color "$pct")${pct}%${RESET}/1w"
+  [ -n "$P7_RST" ] && out="${out} ($(fmt_duration $(( P7_RST - NOW ))))"
+  printf '%s' "$out"
 }
 
 # --- Main -------------------------------------------------------------------
@@ -100,6 +132,8 @@ main() {
   " ' 2>/dev/null)
   eval "$vars"
 
+  NOW=$(date +%s)                             # single date call, reused for both windows (LIM-03)
+
   sep=" ${DIM}·${RESET} "                     # dim separator (D-01)
 
   model_seg=$(seg_model_effort)
@@ -109,7 +143,7 @@ main() {
   body=$(join_segments "$sep" "$model_seg" "$dir_seg")
   LINE1="${DIM}╭─${RESET}${body:+ $body}${RESET}"
 
-  body=$(join_segments "$sep" "$(seg_context)")
+  body=$(join_segments "$sep" "$(seg_context)" "$(seg_5h)" "$(seg_1w)")
   if [ -n "$body" ]; then
     LINE2="${DIM}╰─${RESET} ${body}${RESET}"
   else
