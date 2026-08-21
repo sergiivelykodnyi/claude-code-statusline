@@ -14,7 +14,7 @@ Build the status line inside-out along its risk gradient. Phase 1 delivers every
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Core Status Line from Stdin** - Two-line colorized status with model, effort, directory, context, and rate limits rendered entirely from the stdin payload (completed 2026-08-21)
-- [ ] **Phase 2: Git Segment** - Branch, dirty marker, sync symbol, ahead/behind, and stash count with all edge states, within the render-latency budget
+- [ ] **Phase 2: Git Segment** - Branch, dirty marker, sync symbol, ahead/behind, and stash count with all edge states, within the render-latency budget; layout correction: drop the `╭─ `/`╰─ ` frame prefixes
 - [ ] **Phase 3: Install & Dual-Environment Validation** - Symlink install verified identical on macOS host and Docker Sandbox, documented in README
 - [ ] **Phase 4: Fable Weekly f() Segment** - Fable-specific weekly usage via the OAuth endpoint, cached and fail-silent
 
@@ -56,8 +56,18 @@ Plans:
   2. Outside a git repo, the entire git segment and its separator are absent
   3. Clean repo, detached HEAD, no-upstream (`≢`), and empty-repo states each render correctly, with zero-value counters (`↓0`, `↑0`, `#0`) never appearing
   4. A full render completes well under the ~300ms debounce, using a single jq pass and one primary git status call
+  5. Layout correction: the `╭─ ` and `╰─ ` frame prefixes are removed — both lines render without leading box-drawing frame characters, with all other segments, separators, and colors unchanged
 
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+**Wave 1**
+
+- [ ] 02-01-PLAN.md — Git segment end-to-end (seg_git, semantic per-marker colors, edge states) + frame removal, existing harness kept green
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 02-02-PLAN.md — Git-state regression matrix with real temp repos and the timed render-latency budget in tests/run.sh
 
 ### Phase 3: Install & Dual-Environment Validation
 
@@ -98,6 +108,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Core Status Line from Stdin | 2/2 | Complete    | 2026-08-21 |
-| 2. Git Segment | 0/? | Not started | - |
+| 2. Git Segment | 0/2 | Not started | - |
 | 3. Install & Dual-Environment Validation | 0/? | Not started | - |
 | 4. Fable Weekly f() Segment | 0/? | Not started | - |
