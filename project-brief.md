@@ -5,8 +5,9 @@
 I want to create a custom `statusline.sh` that I can use on my current machine (host) and inside my [Docker Sandboxes](https://docs.docker.com/ai/sandboxes/). What I want to have
 
 ```text
-╭─ model_name (effort) · current_dir_name ⎇ current_git_branch branch_status ahead behind stash
-╰─ context_usage_in_percentage/context_usage_in_tokens/window_size · usage_in_percentage/5h (when_reset) · usage_in_percentage/1w f(usage_in_percentage) (when_reset)
+Row 1: model_name (effort) · current_dir_name ⎇ current_git_branch branch_status ahead behind stash
+
+Row 2: context_usage_in_percentage/context_usage_in_tokens/window_size · usage_in_percentage/5h (when_reset) · usage_in_percentage/1w f(usage_in_percentage) (when_reset)
 ```
 
 - `model_name` - displays a model name; some model names have the `(1M context)` suffix, e.g. `Opus (1M context)`. We need to cut this; I want to have only the name.
@@ -26,8 +27,8 @@ I want to create a custom `statusline.sh` that I can use on my current machine (
 Whole example
 
 ```text
-╭─ Opus 5 (high) · myproject ⎇ main* ≡ ↓2 ↑3 #2
-╰─ 10%/100k/1M · 50%/1w (2h:50m) · 15%/1w f(60%) (3d:5h:57m)
+Opus 5 (high) · myproject ⎇ main* ≡ ↓2 ↑3 #2
+10%/100k/1M · 50%/1w (2h:50m) · 15%/1w f(60%) (3d:5h:57m)
 ```
 
 ## README.md
