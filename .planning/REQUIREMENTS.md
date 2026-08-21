@@ -10,7 +10,7 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Session Info (Line 1)
 
 - [x] **SESH-01**: Status line shows the model display name with any `(1M context)`-style suffix stripped (e.g. `Opus 5`)
-- [ ] **SESH-02**: Status line shows the current reasoning effort in parentheses (e.g. `(high)`), hidden when the model doesn't report effort
+- [x] **SESH-02**: Status line shows the current reasoning effort in parentheses (e.g. `(high)`), hidden when the model doesn't report effort
 - [x] **SESH-03**: Status line shows the basename of the directory Claude is running in
 
 ### Git Status (Line 1)
@@ -24,7 +24,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Context Usage (Line 2)
 
-- [ ] **CTX-01**: Status line shows context usage as `pct/used_tokens/window_size` (e.g. `10%/100k/1M`) using stdin `context_window` fields
+- [x] **CTX-01**: Status line shows context usage as `pct/used_tokens/window_size` (e.g. `10%/100k/1M`) using stdin `context_window` fields
 - [x] **CTX-02**: Token and window numbers are shortened with k/M units (e.g. `100k`, `1M`)
 
 ### Rate Limits (Line 2)
@@ -32,7 +32,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **LIM-01**: Status line shows 5-hour limit usage as `pct/5h` with a reset countdown (e.g. `50%/5h (2h:50m)`) from stdin `rate_limits.five_hour`
 - [x] **LIM-02**: Status line shows weekly limit usage as `pct/1w` with a reset countdown (e.g. `15%/1w (3d:5h:57m)`) from stdin `rate_limits.seven_day`
 - [x] **LIM-03**: Reset countdowns are computed with pure epoch arithmetic (no `date -d`/`date -v`) and formatted as `d:h:m` / `h:m`
-- [ ] **LIM-04**: Rate-limit segments are hidden when the corresponding stdin fields are absent (API-key auth, pre-first-response, older Claude Code)
+- [x] **LIM-04**: Rate-limit segments are hidden when the corresponding stdin fields are absent (API-key auth, pre-first-response, older Claude Code)
 
 ### Fable Weekly (Line 2)
 
@@ -45,14 +45,14 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [x] **PRES-01**: Output is a two-line layout framed with `╭─` / `╰─` box-drawing characters
 - [x] **PRES-02**: Segments are ANSI-colorized
-- [ ] **PRES-03**: Context and rate-limit percentages shift color as usage grows (normal → warning → critical thresholds)
-- [ ] **PRES-04**: Segments with no data are hidden entirely, including their separators — no placeholders
+- [x] **PRES-03**: Context and rate-limit percentages shift color as usage grows (normal → warning → critical thresholds)
+- [x] **PRES-04**: Segments with no data are hidden entirely, including their separators — no placeholders
 
 ### Portability & Robustness
 
 - [ ] **PORT-01**: The script produces identical output on macOS host (bash 3.2, BSD userland) and inside Docker Sandboxes (Linux, GNU userland)
 - [ ] **PORT-02**: The script completes fast enough that Claude Code never blanks the line (well under the ~300ms debounce), using a single jq pass and a single primary git status call
-- [ ] **PORT-03**: The script never emits stderr noise or non-zero exits that would blank the status line; missing fields and errors degrade to hidden segments
+- [x] **PORT-03**: The script never emits stderr noise or non-zero exits that would blank the status line; missing fields and errors degrade to hidden segments
 - [ ] **PORT-04**: The script works when invoked via a symlink from `~/.claude/statusline.sh`, verified in both environments
 
 ### Documentation
@@ -90,19 +90,19 @@ Which phases cover which requirements. Updated during roadmap creation.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | SESH-01 | Phase 1 | Complete |
-| SESH-02 | Phase 1 | Pending |
+| SESH-02 | Phase 1 | Complete |
 | SESH-03 | Phase 1 | Complete |
-| CTX-01 | Phase 1 | Pending |
+| CTX-01 | Phase 1 | Complete |
 | CTX-02 | Phase 1 | Complete |
 | LIM-01 | Phase 1 | Complete |
 | LIM-02 | Phase 1 | Complete |
 | LIM-03 | Phase 1 | Complete |
-| LIM-04 | Phase 1 | Pending |
+| LIM-04 | Phase 1 | Complete |
 | PRES-01 | Phase 1 | Complete |
 | PRES-02 | Phase 1 | Complete |
-| PRES-03 | Phase 1 | Pending |
-| PRES-04 | Phase 1 | Pending |
-| PORT-03 | Phase 1 | Pending |
+| PRES-03 | Phase 1 | Complete |
+| PRES-04 | Phase 1 | Complete |
+| PORT-03 | Phase 1 | Complete |
 | GIT-01 | Phase 2 | Pending |
 | GIT-02 | Phase 2 | Pending |
 | GIT-03 | Phase 2 | Pending |
