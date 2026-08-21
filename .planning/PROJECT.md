@@ -40,17 +40,18 @@ Segment definitions:
 
 ### Validated
 
-(None yet — ship to validate)
+- ✓ Line 1 renders model name (suffix-stripped), effort, and directory name — Phase 1
+- ✓ Line 2 renders context usage as percent / shortened tokens / shortened window size — Phase 1
+- ✓ Line 2 renders 5h rate-limit usage percent with reset countdown — Phase 1
+- ✓ Line 2 renders weekly rate-limit usage percent with reset countdown — Phase 1 (`f()` Fable percent deferred to Phase 4)
+- ✓ Stdin-derived segments with no data are hidden entirely, and the script never fails (exit 0, zero stderr, line 1 always renders) — Phase 1
+- ✓ Output is colorized with ANSI colors, thresholds shift green/yellow/red — Phase 1
 
 ### Active
 
-- [ ] Line 1 renders model name (suffix-stripped), effort, and directory name
 - [ ] Line 1 renders git branch with dirty marker, remote-sync symbol, ahead/behind counts, and stash count when in a git repo
-- [ ] Line 2 renders context usage as percent / shortened tokens / shortened window size
-- [ ] Line 2 renders 5h rate-limit usage percent with reset countdown
-- [ ] Line 2 renders weekly rate-limit usage percent, Fable 5 weekly percent as `f()`, with reset countdown
-- [ ] Segments with no data are hidden entirely (no `⎇` outside git repos, no `#0`, no usage segment when unavailable)
-- [ ] Output is colorized with ANSI colors
+- [ ] Line 2 additionally renders Fable 5 weekly percent as `f()` in the weekly segment
+- [ ] Segments with no data are hidden entirely (no `⎇` outside git repos, no `#0`)
 - [ ] Script works on macOS host and inside Docker Sandboxes
 - [ ] README briefly describes what the status line shows and the symlink command that installs `statusline.sh` into `~/.claude`
 
@@ -77,12 +78,14 @@ Segment definitions:
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Depend on jq (no pure-bash fallback) | Both target environments have it; parsing JSON in bash is fragile | — Pending |
-| Hide empty segments instead of placeholders | Cleaner line; layout stability not valued | — Pending |
-| ANSI-colorized output | Better glanceability (e.g. usage color can shift as limits fill) | — Pending |
+| Depend on jq (no pure-bash fallback) | Both target environments have it; parsing JSON in bash is fragile | ✓ Good — single `@sh`-quoted jq pass proved safe (injection probe) and simple |
+| Hide empty segments instead of placeholders | Cleaner line; layout stability not valued | ✓ Good — hide gates fell out of Plan 01's structure for free; Plan 02 needed zero script changes |
+| ANSI-colorized output | Better glanceability (e.g. usage color can shift as limits fill) | ✓ Good — SGR 2 faint frame + 7-code palette confirmed readable in light and dark themes (UAT) |
 | ↓ = incoming (pull needed), ↑ = outgoing (push needed) | Confirmed with user against brief's wording | — Pending |
 | README-only install (symlink command), no install script | User preference; setup is a one-liner | — Pending |
-| Research the rate-limit data source before committing to one | Not part of the basic stdin payload; reliability unknown | — Pending |
+| Research the rate-limit data source before committing to one | Not part of the basic stdin payload; reliability unknown | ✓ Resolved — stdin `rate_limits.five_hour`/`.seven_day` covers 5h/1w; only Fable `f()` needs the OAuth endpoint (Phase 4) |
+| Threshold color spans `NN%` only, reset before labels | Resolved plan action-text/verify contradiction in favor of the binding verify | ✓ Applied identically at all three percentage sites (Phase 1) |
+| SGR 2 (faint) for frame/separators | Theme-adaptive dim per D-02 without hardcoding a gray | ✓ Confirmed readable on light and dark themes (Phase 1 UAT) |
 
 ## Evolution
 
@@ -102,4 +105,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-21 after initialization*
+*Last updated: 2026-08-21 after Phase 1*

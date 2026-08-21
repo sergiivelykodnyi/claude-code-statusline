@@ -1,32 +1,38 @@
 ---
 phase: 01-core-status-line-from-stdin
 verified: 2026-08-21T18:52:49Z
-status: human_needed
+status: passed
 score: 18/18 must-haves verified
 behavior_unverified: 0
 overrides_applied: 0
 prohibitions:
+
   - statement: "MUST NOT write files, create caches, log, or transmit stdin payload contents anywhere (read-only, network-free)"
     tier: test
     status: verified
     enforcement_evidence: "Wired: tests/run.sh injection probe asserts tests/.pwned never created (run.sh:140-149). Verifier probe: script run from clean cwd with clean TMPDIR created 0 files in either; source scan shows no curl/wget/tee/mktemp/file-redirection in statusline.sh; only subprocesses are cat, jq, date"
+
   - statement: "MUST NOT render placeholder or filler text for absent data (hide-over-placeholder; sole exception D-12 context zero-state)"
     tier: test
     status: verified
     enforcement_evidence: "Wired: tests/run.sh fixture loop asserts byte-exact ANSI-stripped lines for all 7 fixtures (no-effort/no-rate-limits/only-five-hour/empty/malformed all show segments fully absent with separators); the word 'null' and any N/A/dash scaffold appear in no fixture output"
+
   - statement: "MUST NOT reduce or restyle the locked layout: no directory truncation, no width logic, no 256-color/truecolor SGR (D-02, D-15, D-16)"
     tier: judgment
     status: unverified-prohibition
     flagged: true
     llm_judge_verdict: "NON-AUTHORITATIVE PASS — grep finds no COLUMNS/tput/truncation logic in statusline.sh; no 38;2/38;5 SGR codes in code lines; harness palette-purity check passes (only 0m/2m/31m/32m/33m/34m/36m in output); directory rendered full-length. Human review recommended (judgment-tier cannot be closed autonomously)"
 coincidental_reliance_items:
+
   - truth: "Zero-byte and non-JSON stdin render line 1 as top frame + basename of PWD (D-13 fallback keyed off empty MODEL/DIR after eval)"
     reason: undeclared-precondition
     harden: "The eval'd variables (MODEL, EFFORT, DIR, CTX_*, P5_*, P7_*) are never initialized before `eval \"$vars\"` (statusline.sh:133). When jq emits nothing, the names inherit exported environment values — reproduced: `MODEL='LEAKED-MODEL' DIR=/evil/leaked-dir ./statusline.sh < malformed.json` renders '╭─ LEAKED-MODEL · leaked-dir'. Fix: initialize all ten vars to empty immediately before the eval (review WR-01)."
 human_verification:
+
   - test: "Render `./statusline.sh < tests/fixtures/full.json` in both a light-themed and a dark-themed terminal"
     expected: "Dim (SGR 2 faint) frame glyphs and '·' separators are visible-but-receded; cyan model, blue directory, and green/yellow/red percentages are readable on both themes. If SGR 2 is invisible/ugly, the documented fallback is a one-constant swap to bright-black"
     why_human: "Visual readability of SGR 2 faint across terminal themes cannot be asserted by byte checks (harvested from 01-02-PLAN <human-check>; carried in SUMMARY coverage D3/D5, research assumption A1, D-02)"
+
   - test: "Confirm the rendered layout matches your locked decisions: full-length directory name, no segment dropping at narrow widths, named-16 colors only"
     expected: "Layout matches D-01/D-02/D-15/D-16 exactly as you specified — nothing shortened, dropped, or restyled"
     why_human: "Judgment-tier prohibition (01-01-PLAN must_haves.prohibitions #3) — autonomous verification recorded a NON-AUTHORITATIVE pass; per policy this requires explicit human resolution and is flagged 'unverified-prohibition — human review recommended'"
