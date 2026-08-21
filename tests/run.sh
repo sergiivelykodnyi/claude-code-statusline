@@ -1,8 +1,9 @@
 #!/bin/bash
 # tests/run.sh — never-fail regression harness for statusline.sh.
-# One command proves the whole Phase 1 contract: helper tables, all fixture
-# states, exit/stderr silence, threshold colors, palette purity, and
-# eval-injection safety. bash 3.2-safe (runs on the macOS host /bin/bash).
+# One command proves the whole contract: helper tables, all fixture states,
+# exit/stderr silence, threshold colors, palette purity, eval-injection
+# safety, and the git-state matrix against real temp repos. bash 3.2-safe
+# (runs on the macOS host /bin/bash).
 #
 # Usage: /bin/bash tests/run.sh
 # Prints one PASS/FAIL line per check; exits non-zero if any check failed.
@@ -40,7 +41,8 @@ check_ok() {
 }
 
 ERRTMP=$(mktemp "${TMPDIR:-/tmp}/statusline-test.XXXXXX") || exit 1
-trap 'rm -f "$ERRTMP"' EXIT
+TESTTMP=$(mktemp -d "${TMPDIR:-/tmp}/statusline-git.XXXXXX") || exit 1
+trap 'rm -f "$ERRTMP"; rm -rf "$TESTTMP"' EXIT
 
 # --- 1. Syntax gate ---------------------------------------------------------
 
@@ -153,7 +155,148 @@ check_eq "injection probe: exit code" "0" "$rc"
 check_ok "injection probe: tests/.pwned not created" $?
 rm -f tests/.pwned
 
-# --- 8. Optional shellcheck advisory (never fails the harness) --------------
+# --- 8. Git-state matrix (GIT-01..06, D-17..D-27) ----------------------------
+# Real temp repos under $TESTTMP, built hermetically with a config-isolated
+# git wrapper so host config (gpgsign, hooks, init.defaultBranch) cannot
+# leak in. The rendered script itself keeps calling plain git, as it does
+# in production.
+
+# tgit: repo-building git with host/global config isolated.
+tgit() { GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null git "$@"; }
+
+# mk_repo NAME -> path of an isolated repo pinned to main (portable pin via
+# symbolic-ref, no init -b version dependency) with its own identity.
+mk_repo() {
+  local r="$TESTTMP/$1"
+  mkdir "$r" || return 1
+  tgit -C "$r" init -q
+  tgit -C "$r" symbolic-ref HEAD refs/heads/main
+  tgit -C "$r" config user.email test@example.com
+  tgit -C "$r" config user.name Test
+  printf '%s\n' "$r"
+}
+
+# git_render DIR — full.json with workspace.current_dir pointed at DIR,
+# piped through the script; mirrors run_fixture's capture discipline into
+# globals GR_OUT / GR_RC / GR_ERRBYTES.
+git_render() {
+  GR_OUT=$(jq --arg d "$1" '.workspace.current_dir = $d' tests/fixtures/full.json \
+             | /bin/bash "$SL" 2>"$ERRTMP"); GR_RC=$?
+  GR_ERRBYTES=$(wc -c < "$ERRTMP" | tr -d '[:space:]')
+}
+
+# git_line1 DIR -> ANSI-stripped line 1 for that directory. Runs in a
+# command substitution, so callers needing GR_RC/GR_ERRBYTES/GR_OUT must
+# call git_render directly instead.
+git_line1() {
+  git_render "$1"
+  printf '%s\n' "$GR_OUT" | strip_ansi | sed -n 1p
+}
+
+# 8.1 not-a-repo: segment and its joiner space entirely absent (GIT-01).
+mkdir "$TESTTMP/plaindir"
+git_render "$TESTTMP/plaindir"
+l1=$(printf '%s\n' "$GR_OUT" | strip_ansi | sed -n 1p)
+check_eq "git not-a-repo: line 1" "Opus 5 (high) · plaindir" "$l1"
+check_eq "git not-a-repo: exit code" "0" "$GR_RC"
+check_eq "git not-a-repo: stderr bytes" "0" "$GR_ERRBYTES"
+
+# 8.2 progressive repo w: clean in-sync -> boundary ones -> full form.
+tgit init -q --bare "$TESTTMP/remote.git"
+tgit -C "$TESTTMP/remote.git" symbolic-ref HEAD refs/heads/main
+W=$(mk_repo w)
+echo one > "$W/f"
+tgit -C "$W" add f
+tgit -C "$W" commit -q -m c1
+tgit -C "$W" remote add origin "$TESTTMP/remote.git"
+tgit -C "$W" push -q -u origin main 2>/dev/null
+
+# clean in-sync: no dirty star, no counter tokens at zero (GIT-04/GIT-05
+# boundary low side, D-27).
+check_eq "git clean in-sync: line 1" "Opus 5 (high) · w ⎇ main ≡" "$(git_line1 "$W")"
+
+# boundary ones: exactly one behind / one ahead / one stash all render
+# (GIT-04/GIT-05 boundary high side, D-27).
+tgit clone -q "$TESTTMP/remote.git" "$TESTTMP/w2" 2>/dev/null
+tgit -C "$TESTTMP/w2" config user.email test2@example.com
+tgit -C "$TESTTMP/w2" config user.name Test2
+tgit -C "$TESTTMP/w2" commit -q --allow-empty -m r1
+tgit -C "$TESTTMP/w2" push -q origin main 2>/dev/null
+tgit -C "$W" fetch -q origin
+tgit -C "$W" commit -q --allow-empty -m l1
+echo two > "$W/f"
+tgit -C "$W" stash push -q
+check_eq "git boundary ones: line 1" "Opus 5 (high) · w ⎇ main ≡ ↓1 ↑1 #1" "$(git_line1 "$W")"
+
+# full form: behind 2, ahead 3, 2 stashes, untracked file -> dirty star
+# (roadmap criterion 1).
+tgit -C "$TESTTMP/w2" commit -q --allow-empty -m r2
+tgit -C "$TESTTMP/w2" push -q origin main 2>/dev/null
+tgit -C "$W" fetch -q origin
+tgit -C "$W" commit -q --allow-empty -m l2
+tgit -C "$W" commit -q --allow-empty -m l3
+echo three > "$W/f"
+tgit -C "$W" stash push -q
+touch "$W/untracked"
+git_render "$W"
+FULL_RAW=$GR_OUT
+l1=$(printf '%s\n' "$FULL_RAW" | strip_ansi | sed -n 1p)
+check_eq "git full form: line 1" "Opus 5 (high) · w ⎇ main* ≡ ↓2 ↑3 #2" "$l1"
+check_eq "git full form: exit code" "0" "$GR_RC"
+check_eq "git full form: stderr bytes" "0" "$GR_ERRBYTES"
+
+# 8.3 no-upstream with a slashed branch name rendered byte-verbatim
+# (GIT-02 encoding edge, GIT-03 red-glyph state).
+NB=$(mk_repo noup)
+tgit -C "$NB" checkout -q -b feature/x-1
+echo x > "$NB/f"
+tgit -C "$NB" add f
+tgit -C "$NB" commit -q -m c1
+git_render "$NB"
+NOUP_RAW=$GR_OUT
+l1=$(printf '%s\n' "$NOUP_RAW" | strip_ansi | sed -n 1p)
+check_eq "git no-upstream verbatim branch: line 1" \
+  "Opus 5 (high) · noup ⎇ feature/x-1 ≢" "$l1"
+
+# 8.4 detached HEAD: short SHA label, sync symbol hidden entirely
+# (D-24/D-25 — exact equality proves no glyph and no star).
+DT=$(mk_repo det)
+echo a > "$DT/f"; tgit -C "$DT" add f; tgit -C "$DT" commit -q -m c1
+echo b > "$DT/f"; tgit -C "$DT" add f; tgit -C "$DT" commit -q -m c2
+tgit -C "$DT" checkout -q --detach HEAD~1
+DSHA=$(tgit -C "$DT" rev-parse --short HEAD)
+check_eq "git detached: line 1" "Opus 5 (high) · det ⎇ $DSHA" "$(git_line1 "$DT")"
+
+# 8.5 unborn branch (no commits) with one untracked file (D-26).
+UB=$(mk_repo unborn)
+touch "$UB/f"
+check_eq "git unborn: line 1" "Opus 5 (high) · unborn ⎇ main* ≢" "$(git_line1 "$UB")"
+
+# 8.6 marker color bytes (D-17..D-20) — must match seg_git's composition
+# exactly: magenta branch span incl. glyph, yellow star, green has-upstream
+# glyph, whole-token yellow behind / green ahead / dim stash.
+want="${ESC}[35m⎇ main${ESC}[0m${ESC}[33m*${ESC}[0m ${ESC}[32m≡${ESC}[0m ${ESC}[33m↓2${ESC}[0m ${ESC}[32m↑3${ESC}[0m ${ESC}[2m#2${ESC}[0m"
+case "$FULL_RAW" in *"$want"*) r=0;; *) r=1;; esac
+check_ok "git color bytes: magenta branch, yellow *, green ≡, yellow ↓2, green ↑3, dim #2" $r
+
+# red no-upstream glyph — the user's explicit choice (D-19).
+want="${ESC}[31m≢${ESC}[0m"
+case "$NOUP_RAW" in *"$want"*) r=0;; *) r=1;; esac
+check_ok "git color bytes: red ≢ on no-upstream (D-19)" $r
+
+# 8.7 palette purity over the git render — section 6 runs on a non-repo
+# fixture and never sees magenta; this pass exercises the git colors.
+r=0
+for s in $(printf '%s\n' "$FULL_RAW" \
+             | grep -o "${ESC}\[[0-9;]*m" | sed "s/${ESC}\[//" | sort -u); do
+  case " 0m 2m 31m 32m 33m 34m 35m 36m " in
+    *" $s "*) ;;
+    *) r=1; printf '  unexpected SGR sequence: %s\n' "$s" ;;
+  esac
+done
+check_ok "git palette purity: full-form render only 0m/2m/31m/32m/33m/34m/35m/36m" $r
+
+# --- 9. Optional shellcheck advisory (never fails the harness) --------------
 
 if command -v shellcheck > /dev/null 2>&1; then
   printf 'INFO shellcheck advisory (non-failing):\n'
