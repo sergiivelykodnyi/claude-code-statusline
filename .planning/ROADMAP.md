@@ -7,6 +7,7 @@ Build the status line inside-out along its risk gradient. Phase 1 delivers every
 ## Phases
 
 **Phase Numbering:**
+
 - Integer phases (1, 2, 3): Planned milestone work
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
 
@@ -20,56 +21,73 @@ Decimal phases appear between their surrounding integers in numeric order.
 ## Phase Details
 
 ### Phase 1: Core Status Line from Stdin
+
 **Goal**: One glance shows which model at which effort, where Claude is running, and how much context and rate limit remain — rendered entirely from the stdin JSON payload
 **Mode:** mvp
 **Depends on**: Nothing (first phase)
 **Requirements**: SESH-01, SESH-02, SESH-03, CTX-01, CTX-02, LIM-01, LIM-02, LIM-03, LIM-04, PRES-01, PRES-02, PRES-03, PRES-04, PORT-03
 **Success Criteria** (what must be TRUE):
+
   1. Piping a full sample payload into the script prints a colorized two-line status framed with `╭─`/`╰─`: suffix-stripped model name, effort, and directory basename on line 1; `10%/100k/1M` context and `50%/5h (2h:50m) · 15%/1w (3d:5h:57m)` rate-limit segments on line 2
   2. Context and rate-limit percentages shift color as usage crosses warning and critical thresholds
   3. With stdin fields absent or null (no effort, no rate limits, no context), the corresponding segments and their separators disappear entirely — no placeholders, no errors
   4. The script always exits 0 and emits nothing to stderr, even on malformed or empty input; line 1 renders in every case
+
 **Plans**: 2 plans
 
 Plans:
+**Wave 1**
+
 - [ ] 01-01-PLAN.md — Tracer: framed two-line status from the full stdin payload (segments, thresholds, countdowns)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 01-02-PLAN.md — Hide/zero/worst-case states, fixture set, and the never-fail test harness
 
 ### Phase 2: Git Segment
+
 **Goal**: Line 1 shows the full git situation at a glance in any repo state, without slowing the render
 **Mode:** mvp
 **Depends on**: Phase 1
 **Requirements**: GIT-01, GIT-02, GIT-03, GIT-04, GIT-05, GIT-06, PORT-02
 **Success Criteria** (what must be TRUE):
+
   1. In a dirty repo with an upstream, unpulled/unpushed commits, and stashes, line 1 shows the full segment in the form `⎇ main* ≡ ↓2 ↑3 #2`
   2. Outside a git repo, the entire git segment and its separator are absent
   3. Clean repo, detached HEAD, no-upstream (`≢`), and empty-repo states each render correctly, with zero-value counters (`↓0`, `↑0`, `#0`) never appearing
   4. A full render completes well under the ~300ms debounce, using a single jq pass and one primary git status call
+
 **Plans**: TBD
 
 ### Phase 3: Install & Dual-Environment Validation
+
 **Goal**: The status line is installed by symlink from this repo, renders identically on the macOS host and inside a live Docker Sandbox, and the README lets anyone reproduce the setup
 **Mode:** mvp
 **Depends on**: Phase 2
 **Requirements**: PORT-01, PORT-04, DOCS-01, DOCS-02
 **Success Criteria** (what must be TRUE):
+
   1. Following only the README's `ln -s` one-liner and `settings.json` snippet gets the status line rendering in Claude Code on the macOS host
   2. Inside a live Docker Sandbox, the same symlinked `~/.claude/statusline.sh` resolves (no dangling link) and renders output identical to the host
   3. Reset countdowns keep ticking while the session is idle, via the `refreshInterval` in the documented settings snippet
   4. README shows what the status line displays (with the example output) plus the symlink install command and the `statusLine` settings snippet
+
 **Plans**: TBD
 
 ### Phase 4: Fable Weekly f() Segment
+
 **Goal**: The weekly segment additionally shows Fable-specific usage as `f(pct)`, fetched and cached without ever risking or delaying the rest of the line
 **Mode:** mvp
 **Depends on**: Phase 3
 **Requirements**: FAB-01, FAB-02, FAB-03, FAB-04
 **Research flag**: Needs research — undocumented `GET /api/oauth/usage` endpoint (confirm current window key and `utilization` scale), per-platform credential discovery (macOS Keychain vs `~/.claude/.credentials.json`), and sandbox credential presence must be verified during planning
 **Success Criteria** (what must be TRUE):
+
   1. With valid OAuth credentials on the macOS host (Keychain), the weekly segment reads like `15%/1w f(60%) (3d:5h:57m)`
   2. Inside a Docker Sandbox, the token is discovered from `~/.claude/.credentials.json` and `f()` renders the same way
   3. On any failure — no credentials, endpoint change, timeout, offline — `f()` silently disappears while every other segment renders normally
   4. Repeated renders within the cache TTL make no network call, and a cold fetch never delays the render beyond its short curl timeout
+
 **Plans**: TBD
 
 ## Progress
