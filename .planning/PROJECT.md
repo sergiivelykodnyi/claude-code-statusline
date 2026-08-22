@@ -2,7 +2,7 @@
 
 ## What This Is
 
-A custom `statusline.sh` for Claude Code that renders a two-line, box-drawing status line showing the session at a glance: model name and reasoning effort, current directory, rich git status (branch, dirty state, sync state, ahead/behind, stashes) on line one; context-window usage and 5-hour / weekly rate-limit usage with reset countdowns on line two. It must work identically on the user's host machine (macOS) and inside Docker Sandboxes, installed by symlinking into `~/.claude`.
+A custom `statusline.sh` for Claude Code that renders a two-line status line showing the session at a glance: model name and reasoning effort, current directory, rich git status (branch, dirty state, sync state, ahead/behind, stashes) on line one; context-window usage and 5-hour / weekly rate-limit usage with reset countdowns on line two. It must work identically on the user's host machine (macOS) and inside Docker Sandboxes, installed by symlinking into `~/.claude`.
 
 ## Core Value
 
@@ -11,16 +11,18 @@ One glance at the terminal tells you everything about the session: which model a
 ## Target Layout
 
 ```text
-╭─ model_name (effort) · current_dir_name ⎇ current_git_branch branch_status ahead behind stash
-╰─ context_usage_pct/context_usage_tokens/window_size · usage_pct/5h (when_reset) · usage_pct/1w f(usage_pct) (when_reset)
+model_name (effort) · current_dir_name ⎇ current_git_branch branch_status ahead behind stash
+context_usage_pct/context_usage_tokens/window_size · usage_pct/5h (when_reset) · usage_pct/1w f(usage_pct) (when_reset)
 ```
 
 Whole example:
 
 ```text
-╭─ Opus 5 (high) · myproject ⎇ main* ≡ ↓2 ↑3 #2
-╰─ 10%/100k/1M · 50%/1w (2h:50m) · 15%/1w f(60%) (3d:5h:57m)
+Opus 5 (high) · myproject ⎇ main* ≡ ↓2 ↑3 #2
+10%/100k/1M · 50%/1w (2h:50m) · 15%/1w f(60%) (3d:5h:57m)
 ```
+
+> Layout correction (Phase 2): the `╭─ `/`╰─ ` frame prefixes from the original design are removed — Phase 1 shipped with them; Phase 2 drops them.
 
 Segment definitions:
 
@@ -46,12 +48,13 @@ Segment definitions:
 - ✓ Line 2 renders weekly rate-limit usage percent with reset countdown — Phase 1 (`f()` Fable percent deferred to Phase 4)
 - ✓ Stdin-derived segments with no data are hidden entirely, and the script never fails (exit 0, zero stderr, line 1 always renders) — Phase 1
 - ✓ Output is colorized with ANSI colors, thresholds shift green/yellow/red — Phase 1
+- ✓ Line 1 renders git branch with dirty marker, remote-sync symbol, ahead/behind counts, and stash count when in a git repo — Phase 2
+- ✓ Segments with no data are hidden entirely (no `⎇` outside git repos, no `#0`, no `↓0`/`↑0`) — Phase 2
+- ✓ Frame prefixes `╭─ `/`╰─ ` removed; both lines render bare (layout correction) — Phase 2
 
 ### Active
 
-- [ ] Line 1 renders git branch with dirty marker, remote-sync symbol, ahead/behind counts, and stash count when in a git repo
 - [ ] Line 2 additionally renders Fable 5 weekly percent as `f()` in the weekly segment
-- [ ] Segments with no data are hidden entirely (no `⎇` outside git repos, no `#0`)
 - [ ] Script works on macOS host and inside Docker Sandboxes
 - [ ] README briefly describes what the status line shows and the symlink command that installs `statusline.sh` into `~/.claude`
 
@@ -81,11 +84,15 @@ Segment definitions:
 | Depend on jq (no pure-bash fallback) | Both target environments have it; parsing JSON in bash is fragile | ✓ Good — single `@sh`-quoted jq pass proved safe (injection probe) and simple |
 | Hide empty segments instead of placeholders | Cleaner line; layout stability not valued | ✓ Good — hide gates fell out of Plan 01's structure for free; Plan 02 needed zero script changes |
 | ANSI-colorized output | Better glanceability (e.g. usage color can shift as limits fill) | ✓ Good — SGR 2 faint frame + 7-code palette confirmed readable in light and dark themes (UAT) |
-| ↓ = incoming (pull needed), ↑ = outgoing (push needed) | Confirmed with user against brief's wording | — Pending |
+| ↓ = incoming (pull needed), ↑ = outgoing (push needed) | Confirmed with user against brief's wording | ✓ Applied — `↓N` behind (yellow) / `↑N` ahead (green) from `branch.ab`, hidden at zero (Phase 2) |
 | README-only install (symlink command), no install script | User preference; setup is a one-liner | — Pending |
 | Research the rate-limit data source before committing to one | Not part of the basic stdin payload; reliability unknown | ✓ Resolved — stdin `rate_limits.five_hour`/`.seven_day` covers 5h/1w; only Fable `f()` needs the OAuth endpoint (Phase 4) |
 | Threshold color spans `NN%` only, reset before labels | Resolved plan action-text/verify contradiction in favor of the binding verify | ✓ Applied identically at all three percentage sites (Phase 1) |
 | SGR 2 (faint) for frame/separators | Theme-adaptive dim per D-02 without hardcoding a gray | ✓ Confirmed readable on light and dark themes (Phase 1 UAT) |
+| One `git status --porcelain=v2 --branch` + stash `rev-list`, all under `GIT_OPTIONAL_LOCKS=0`, uncached | One read-only ~12 ms process per render; never takes index locks while Claude itself runs git | ✓ 10 full renders ≤ 2 s budget (measured 0–1 s); session cache kept as a documented lever only (Phase 2) |
+| Semantic per-marker git colors spanning the whole token (magenta branch, yellow `*`/`↓N`, green `≡`/`↑N`, red `≢`, dim `#N`) | Glanceability — each marker reads as one colored unit | ✓ Legible on light and dark themes (Phase 2 UAT) |
+| Type-guard all 10 stdin fields inside the single jq `@sh` program (`strings` on MODEL/EFFORT/DIR, `uint` = numbers→floor→0≤n<1e15 on the 7 numerics) | jq `@sh` quotes each array element as its own eval word (array-payload RCE, CR-02); string `resets_at` reached `$(( ))` (CR-01); floats/exponents leaked stderr | ✓ Both RCEs closed at one choke point, one jq pass preserved, renders byte-identical; 14/14 threats closed in 02-SECURITY.md (Phase 2) |
+| Every new harness security probe must be proven to bite against the pre-fix script | A probe that cannot fail is false assurance (02-VERIFICATION CR-02 was missed by string-only probes) | ✓ Convention established; suite 82 → 125 checks with recorded pre-fix failure sets (Phase 2) |
 
 ## Evolution
 
@@ -105,4 +112,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-21 after Phase 1*
+*Last updated: 2026-08-22 after Phase 2*

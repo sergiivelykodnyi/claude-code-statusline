@@ -14,7 +14,7 @@ Build the status line inside-out along its risk gradient. Phase 1 delivers every
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Core Status Line from Stdin** - Two-line colorized status with model, effort, directory, context, and rate limits rendered entirely from the stdin payload (completed 2026-08-21)
-- [ ] **Phase 2: Git Segment** - Branch, dirty marker, sync symbol, ahead/behind, and stash count with all edge states, within the render-latency budget; layout correction: drop the `╭─ `/`╰─ ` frame prefixes
+- [x] **Phase 2: Git Segment** - Branch, dirty marker, sync symbol, ahead/behind, and stash count with all edge states, within the render-latency budget; layout correction: drop the `╭─ `/`╰─ ` frame prefixes (completed 2026-08-22)
 - [ ] **Phase 3: Install & Dual-Environment Validation** - Symlink install verified identical on macOS host and Docker Sandbox, documented in README
 - [ ] **Phase 4: Fable Weekly f() Segment** - Fable-specific weekly usage via the OAuth endpoint, cached and fail-silent
 
@@ -113,6 +113,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Core Status Line from Stdin | 2/2 | Complete    | 2026-08-21 |
-| 2. Git Segment | 4/4 | In Progress|  |
+| 2. Git Segment | 4/4 | Complete    | 2026-08-22 |
 | 3. Install & Dual-Environment Validation | 0/? | Not started | - |
 | 4. Fable Weekly f() Segment | 0/? | Not started | - |

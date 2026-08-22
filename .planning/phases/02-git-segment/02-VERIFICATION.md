@@ -1,7 +1,7 @@
 ---
 phase: 02-git-segment
 verified: 2026-08-22T09:09:28Z
-status: human_needed
+status: passed
 score: 19/19 must-haves verified (all 5 ROADMAP success criteria + all 02-01/02-02/02-03/02-04 truths; CR-02, WR-03, WR-04 confirmed closed by live re-probe on /bin/bash 3.2.57 + jq 1.7.1)
 behavior_unverified: 0
 overrides_applied: 0
@@ -9,15 +9,18 @@ re_verification:
   previous_status: gaps_found
   previous_score: 13/14
   gaps_closed:
+
     - "CR-02: an array-valued JSON payload in .model.display_name, .effort.level, or .workspace.current_dir no longer executes anything — `| strings // \"\"` on all 3 string fields inside the single jq program; re-probed live on /bin/bash 3.2.57 for all three fields (marker absent, rc 0, 0 stderr, 2 lines), plus nested arrays, object-wrapped arrays, whole-subtree arrays (.model / .workspace), and a top-level array payload — none executes. The same array payload against the pre-fix script (5404c4e~1) DOES create the marker, so the fix is what closes it."
     - "WR-04: tests/run.sh section 7.4 injects the JSON array into all 10 @sh-ingested fields under /bin/bash (20 checks); run in a temp copy against the pre-Task-1 script the harness fails exactly the three string-field `tests/.pwned not created` probes (plus 7.5's eight, which post-date that script); against the pre-02-03 script it fails 22 — the net now bites on both RCE classes."
     - "WR-03: `def uint: (numbers | floor | select(. >= 0 and . < 1e15)) // \"\";` applied to all 7 numeric fields; 20 own probes (float/exponent/negative/boundary resets_at, used_percentage, total_input_tokens, context_window_size; nan/Infinity/-Infinity literals; bool; numeric string) all rc 0 and 0 stderr bytes, degrading per hide-over-placeholder; 23.5 still renders 23%. Pre-Task-3 script fails the four leak probes (harness in temp copy: 8 failures) while the 23.5 pin passes."
   gaps_remaining: []
   regressions: []
 human_verification:
+
   - test: "Render the full-form git segment in a live terminal on both a light and a dark theme and read line 1 at a glance."
     expected: "Every marker is legible and distinguishable: magenta branch, yellow dirty *, green ≡ / red ≢, yellow ↓N, green ↑N, dim #N — no marker washes out against either background."
     why_human: "Color legibility and glanceability in a real terminal is a visual judgment no string/byte assertion can prove (plan 01 D5, human_judgment: true). Carried forward unchanged from both previous verifications; unaffected by 02-03/02-04."
+
   - test: "Sign off the four judgment-tier prohibitions (02-01: no network in the render path; no repository mutation during render. 02-04: never execute a command derived from a stdin value; no second jq / second primary git status / network call added). Review the evidence column in the Prohibitions table."
     expected: "Each prohibition holds. Evidence: grep `git .*fetch|curl` = 0; all 3 git calls are read-only (status/rev-parse/rev-list) and carry GIT_OPTIONAL_LOCKS=0; every @sh-ingested field is type-guarded (3 `strings`, 7 `uint`, 0 bare) and 13 live array/structural payloads executed nothing; non-comment `jq -r` = 1, `porcelain=v2` = 1."
     why_human: "These prohibitions are authored descriptor-less (verification: judgment). The verifier's verdict above is an evidence-backed LLM-judge verdict and is flagged `unverified-prohibition — human review recommended` per the judgment-tier soft-gate; it is never a silent pass. Belongs in the end-of-phase human checkpoint alongside the legibility UAT."
