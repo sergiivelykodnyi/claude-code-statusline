@@ -58,7 +58,7 @@ Plans:
   4. A full render completes well under the ~300ms debounce, using a single jq pass and one primary git status call
   5. Layout correction: the `╭─ ` and `╰─ ` frame prefixes are removed — both lines render without leading box-drawing frame characters, with all other segments, separators, and colors unchanged
 
-**Plans**: 2/2 plans executed
+**Plans**: 3 plans (2 executed, 1 gap-closure pending)
 
 Plans:
 **Wave 1**
@@ -68,6 +68,10 @@ Plans:
 **Wave 2** *(blocked on Wave 1 completion)*
 
 - [x] 02-02-PLAN.md — Git-state regression matrix with real temp repos and the timed render-latency budget in tests/run.sh
+
+**Gap closure** *(from 02-VERIFICATION.md: CR-01 RCE + WR-01/WR-02)*
+
+- [ ] 02-03-PLAN.md — Enforce numeric type at the jq @sh boundary (closes the resets_at command-injection RCE + stderr leak) and extend the harness injection probe to resets_at + a non-numeric-field stderr probe
 
 ### Phase 3: Install & Dual-Environment Validation
 
