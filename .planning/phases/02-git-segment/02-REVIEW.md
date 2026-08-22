@@ -1,6 +1,6 @@
 ---
 phase: 02-git-segment
-reviewed: 2026-08-21T00:00:00Z
+reviewed: 2026-08-22T00:00:00Z
 depth: standard
 files_reviewed: 4
 files_reviewed_list:
@@ -16,161 +16,190 @@ findings:
 status: issues_found
 ---
 
-# Phase 02: Code Review Report
+# Phase 02: Code Review Report (re-review after gap closure)
 
-**Reviewed:** 2026-08-21
+**Reviewed:** 2026-08-22
 **Depth:** standard
 **Files Reviewed:** 4
 **Status:** issues_found
 
 ## Summary
 
-Reviewed the Phase 2 git-segment work: the new `seg_git()` renderer and the
-substantially expanded `tests/run.sh` harness, plus the doc-only diffs to
-`project-brief.md` and `.gitignore`. The git segment itself is well-built —
-single porcelain-v2 call, `GIT_OPTIONAL_LOCKS=0`, bash-3.2-safe here-string
-parse, hide-over-placeholder discipline, and a genuinely thorough real-repo
-test matrix. All 82 harness checks pass.
+Re-reviewed Phase 02 after gap-closure plan 02-03 (commits `ac5c87a`,
+`4775cf2`) landed. All three prior findings were independently re-verified
+against the current code under `/bin/bash` 3.2.57 + jq 1.7.1. The harness now
+reports **95 checks, 0 failures**.
 
-However, adversarial probing of the **existing** ingestion path (touched at
-this phase's seam and exercised by the new git fixtures) uncovered a
-**confirmed arbitrary command-execution vulnerability**: the `resets_at`
-payload fields flow unvalidated into a bash `$(( ))` arithmetic context, and
-under the project's pinned interpreter `/bin/bash` 3.2.57 this executes
-embedded command substitutions. The `@sh` quoting the project relies on for
-injection safety is completely bypassed by the arithmetic sink, and the
-harness's dedicated injection regression test only covers `current_dir`, so
-the gap passes CI silently. This is a BLOCKER.
+**Prior findings — verified resolved:**
+
+- **CR-01 (resets_at RCE) — RESOLVED.** `| numbers // ""` was appended to all
+  seven numeric fields. Direct re-probe with
+  `resets_at="x[$(touch MARKER)]"` (both windows) plus the same payload in
+  `used_percentage`/`total_input_tokens`/`context_window_size` produced **no
+  marker, zero stderr, exit 0**. The jq numeric guard empties the field before
+  it reaches the `$(( ))` sink, and a JSON array in a numeric field is likewise
+  mapped to empty. Confirmed the array-subscript command-substitution defect
+  still exists in the host shell (`echo $(( 'x[$(touch f)]' - 1 ))` runs
+  `touch` on 3.2.57), so the guard — not the shell — is what closes it.
+- **WR-01 (missing regression probe) — RESOLVED.** `tests/run.sh` section 7.2
+  adds arithmetic-reachable injection probes for `resets_at` (both windows) and
+  the three `context_window` numerics, all piped through `/bin/bash` so the
+  3.2-specific behavior is actually exercised. 7.3 adds the non-numeric-field
+  probe.
+- **WR-02 (non-numeric stderr leak) — RESOLVED for the reported case.**
+  `total_input_tokens="abc"` now renders `10%/0/1M` with zero stderr (7.3
+  asserts this). Note the guard closes only the *non-number-type* class; a
+  residual leak for pathological *numeric* values survives — see WR-03 below.
+- **IN-01 (missing `local`) — RESOLVED.** Line 170 now declares
+  `local input vars sep model_seg dir_seg git_seg body NOW LINE1 LINE2`.
+
+Fresh adversarial review then surfaced one **new BLOCKER of the same class as
+CR-01 through a different vector**: the gap-closure hardened the seven *numeric*
+fields but left the three *string* fields (`MODEL`, `EFFORT`, `DIR`) with only
+`// ""` — and a JSON **array** in any of those fields breaks out of `@sh`
+per-element quoting into multiple `eval` words, executing arbitrary commands.
+This is confirmed exploitable on the target shell.
 
 ## Critical Issues
 
-### CR-01: Command injection via `resets_at` fields into `$(( ))` arithmetic
+### CR-02: Array-valued string field escapes `@sh` quoting into `eval` — arbitrary command execution
 
-**File:** `statusline.sh:147` and `statusline.sh:157` (sinks); `statusline.sh:176,178` (source)
+**File:** `statusline.sh:172-184` (source: lines 173-175; sink: `eval "$vars"` line 184)
 **Issue:**
-`seg_5h` and `seg_1w` compute the countdown with:
-
-```bash
-[ -n "$P5_RST" ] && out="${out} ($(fmt_duration $(( P5_RST - NOW ))))"   # line 147
-[ -n "$P7_RST" ] && out="${out} ($(fmt_duration $(( P7_RST - NOW ))))"   # line 157
-```
-
-`P5_RST` / `P7_RST` come straight from the payload
-(`.rate_limits.five_hour.resets_at` / `.seven_day.resets_at`) via
-`@sh`-quoted `eval`. The `@sh` quoting makes the *eval* safe, so each variable
-holds the string **literally** — but that literal is then fed into a bash
-arithmetic expansion. In bash, an operand like `x[$(cmd)]` is parsed as an
-array reference whose subscript is command-substituted, so `$(cmd)` runs.
-
-Confirmed under the project's target interpreter (execution trace line 110
-shows `touch` firing inside `$(( P5_RST - NOW ))`):
+CR-01's fix added `| numbers // ""` to the seven numeric fields, which also
+neutralizes arrays (an array is not a number → `""`). But the three string
+fields were left unguarded:
 
 ```
-$ /bin/bash --version
-GNU bash, version 3.2.57(1)-release (arm64-apple-darwin25)
-$ printf '%s' '{"model":{"display_name":"Opus"},"workspace":{"current_dir":"/tmp"},
-  "rate_limits":{"five_hour":{"used_percentage":50,"resets_at":"x[$(touch /tmp/pwned)]"}}}' \
-  | /bin/bash statusline.sh >/dev/null 2>&1
-$ ls /tmp/pwned   # -> file created (arbitrary command executed)
+MODEL=\(.model.display_name // "")     # line 173
+EFFORT=\(.effort.level // "")          # line 174
+DIR=\(.workspace.current_dir // "")    # line 175
 ```
 
-Both `five_hour` and `seven_day` `resets_at` are exploitable. Note this fires
-specifically on **macOS `/bin/bash` 3.2.57 — the primary target platform**;
-newer bash (4/5) does not command-substitute the subscript here, which is why
-the vulnerability can hide from a reviewer testing under a modern shell.
+`@sh` shell-quotes each element of its input. When the field is a **string**,
+that yields one safe quoted token (this is why the existing T-01-01
+`current_dir` probe — a string with `;$()` — passes). But when the field is a
+JSON **array**, `@sh` emits one quoted token *per element separated by spaces*,
+and `eval` then parses them as separate words:
 
-Impact: any payload value reaching `resets_at` (server-controlled via the
-OAuth usage API response, or an MITM/compromised proxy) executes arbitrary
-shell commands locally on every status-line render. The project's own threat
-model already treats payload fields as untrusted (hence `@sh` and the T-01-01
-injection regression test); the arithmetic sink defeats that protection.
-
-**Fix:** Enforce numeric type at the jq boundary so non-numbers become empty
-(and are then skipped by the `[ -n "$P5_RST" ]` guard). Apply to every numeric
-field for defense-in-depth:
-
-```bash
-vars=$(printf '%s' "$input" | jq -r '@sh "
-    MODEL=\(.model.display_name // "")
-    EFFORT=\(.effort.level // "")
-    DIR=\(.workspace.current_dir // "")
-    CTX_PCT=\(.context_window.used_percentage // "" | numbers // "")
-    CTX_TOK=\(.context_window.total_input_tokens // "" | numbers // "")
-    CTX_WIN=\(.context_window.context_window_size // "" | numbers // "")
-    P5_PCT=\(.rate_limits.five_hour.used_percentage // "" | numbers // "")
-    P5_RST=\(.rate_limits.five_hour.resets_at // "" | numbers // "")
-    P7_PCT=\(.rate_limits.seven_day.used_percentage // "" | numbers // "")
-    P7_RST=\(.rate_limits.seven_day.resets_at // "" | numbers // "")
-  " ' 2>/dev/null)
+```
+$ echo '{"model":{"display_name":["","touch","/tmp/pwn"]}}' \
+    | jq -r '@sh "MODEL=\(.model.display_name // "")"'
+MODEL='' 'touch' '/tmp/pwn'
 ```
 
-(`numbers // ""` passes number values through and maps anything else to empty;
-verified: `"x[$(touch pwn)]"` → `P5_RST=''`, `1700000000` → `P5_RST=1700000000`.)
-A bash-3.2 belt-and-suspenders alternative at the sink is
-`P5_RST=${P5_RST//[^0-9-]/}` before the arithmetic, but the jq guard is the
-cleaner single-point fix.
+`eval "MODEL='' 'touch' '/tmp/pwn'"` runs `MODEL=''` as a command-scope
+assignment prefix and then executes `touch /tmp/pwn`. Confirmed under the target
+interpreter — all three fields are exploitable:
+
+```
+$ echo '{"model":{"display_name":["","touch","'$M'"]}}'     | /bin/bash statusline.sh  # MARKER created
+$ echo '{"workspace":{"current_dir":["","touch","'$M'"]}}'  | /bin/bash statusline.sh  # MARKER created
+$ echo '{"effort":{"level":["","touch","'$M'"]}}'           | /bin/bash statusline.sh  # MARKER created
+```
+
+Each fires with `rc=0` and zero stderr — a silent RCE on every render. This is
+the same eval-injection class the project already treats as in-scope: the
+existing T-01-01 test guards `current_dir` against string injection, proving
+`current_dir` is considered attacker-reachable — and it is still exploitable
+here via the array form. `resets_at`/OAuth-usage fields are server-controlled
+(MITM/compromised-proxy reachable), so the threat model is not hypothetical.
+
+**Fix:** Enforce string type at the jq boundary exactly as the numeric fields
+enforce number type, so a non-string (array/object/bool) collapses to `""` and
+is then hidden by the existing `[ -n ... ]` gates:
+
+```
+MODEL=\(.model.display_name // "" | strings // "")
+EFFORT=\(.effort.level // "" | strings // "")
+DIR=\(.workspace.current_dir // "" | strings // "")
+```
+
+Verified: array `display_name` → `MODEL=''`; object `current_dir` → `DIR=''`;
+a normal string (`"high"`) passes through unchanged. This makes all ten fields
+uniformly type-guarded before `eval`.
 
 ## Warnings
 
-### WR-01: Injection regression test covers only `current_dir`, masking CR-01
+### WR-03: Numeric guard still passes floats / exponent / `nan`, leaking arithmetic stderr
 
-**File:** `tests/run.sh:147-156`
-**Issue:** Section 7 ("Injection probe — T-01-01 regression") asserts safety by
-injecting into `.workspace.current_dir` only. Every numeric field that flows
-into an arithmetic context (`resets_at`, and the `%`/`-ge` comparisons) is
-untested, and all fixtures carry well-formed integer `resets_at`, so the
-BLOCKER in CR-01 passes all 82 checks. The passing suite gives false
-confidence that payload injection is closed.
-**Fix:** Extend the injection probe to the arithmetic-reachable fields, e.g.:
+**File:** `statusline.sh:147,157` (`$(( P5_RST - NOW ))` / `$(( P7_RST - NOW ))`), `51-52`, `23-24`
+**Issue:** `numbers // ""` maps only non-*number* types to empty. Legitimate
+JSON numbers that are not bash-parseable integers still flow to the integer
+sinks and violate the project's fail-silent / `stderr == 0` invariant:
+
+```
+resets_at = 1755800000.5   -> line 147: "syntax error: invalid arithmetic operator (error token is .5)"
+resets_at = 1e100          -> line 147: "1E: value too great for base (error token is 1E)"
+total_input_tokens = 100000.7 -> line 23/24: "[: 100000.7: integer expression expected"
+used_percentage = 1e2      -> line 51/52: "[: 1E+2: integer expression expected"  (renders "1E+2%")
+used_percentage = nan      -> line 51/52: "[: null: integer expression expected"  (renders "null%")
+```
+
+The PCT fields are partially protected by `${PCT%.*}` (so a plain `23.5` →
+`23`), but that does not strip exponent notation (`1E+2` has no `.`) or
+truncate `resets_at` at all before the arithmetic. `resets_at` is contractually
+an epoch number; a float or exponent epoch — or any malformed payload — prints a
+bash error to stderr on every render. The reported WR-02 case ("abc") is fixed,
+but this adjacent class (well-typed-but-non-integer numbers) is not, and no
+fixture/probe covers it (all fixtures carry clean integers). Severity is
+robustness/noise, not RCE — the `[` and `$(( ))` sinks error but do not
+command-inject once the value is a real number.
+
+**Fix:** Canonicalize to a bash-safe non-negative integer at the jq boundary,
+e.g. a reusable filter:
+
+```
+def uint: (numbers | floor | select(. >= 0 and . < 1e15)) // "";
+```
+
+applied to `CTX_TOK`, `CTX_WIN`, `P5_RST`, `P7_RST` (and `floor` alone for the
+0–100 PCT fields). `floor` also rids the output of exponent notation. Verified:
+`1e100 → ""`, `100000.7 → 100000`, `nan → ""`, `1755800000 → 1755800000`.
+Add a fixture or probe asserting zero stderr for a float `resets_at` /
+`used_percentage`.
+
+### WR-04: Injection probes cover only the string-payload vector, not the array vector
+
+**File:** `tests/run.sh:147-188`
+**Issue:** Every injection probe (7.1 `current_dir`, 7.2 numeric fields, 7.3
+non-numeric) injects a **string** value (`"x[$(...)]"`, `"/tmp/x; $(...)"`,
+`"abc"`). None inject a JSON **array**, which is the exact vector that bypasses
+`@sh` quoting in CR-02. The suite therefore passes 95/95 while the string
+fields are wide open. This is the same false-confidence failure mode WR-01
+called out for CR-01 — the regression net has a hole shaped like the live bug.
+**Fix:** Add an array-payload probe for each `@sh`-ingested field (at minimum
+the three string fields), run under `/bin/bash`:
 
 ```bash
+for path in .model.display_name .effort.level .workspace.current_dir \
+            .rate_limits.five_hour.resets_at .context_window.total_input_tokens; do
+  rm -f tests/.pwned
+  jq "$path = [\"\",\"touch\",\"tests/.pwned\"]" tests/fixtures/full.json \
+     | /bin/bash "$SL" > /dev/null 2>&1
+  [ ! -e tests/.pwned ]
+  check_ok "array-injection probe: $path not executed" $?
+done
 rm -f tests/.pwned
-jq '.rate_limits.five_hour.resets_at = "x[$(touch tests/.pwned)]"' \
-   tests/fixtures/full.json | /bin/bash "$SL" > /dev/null 2>&1
-[ ! -e tests/.pwned ]
-check_ok "injection probe: resets_at not executed" $?
 ```
-
-Add the same for `.rate_limits.seven_day.resets_at`. These must be run under
-`/bin/bash` (3.2 on the host) to catch the version-specific behavior.
-
-### WR-02: Numeric fields unvalidated — non-numeric input leaks to stderr
-
-**File:** `statusline.sh:22-23` (`shorten_num`), `132-138` (`seg_context`)
-**Issue:** `seg_context` guards only for empty (`[ -z "$tok" ] && tok=0`), not
-for non-numeric. A non-numeric `total_input_tokens`/`context_window_size`
-(contract violation or hostile payload) makes `shorten_num`'s
-`[ "$n" -ge 1000000 ]` emit `integer expression expected` to stderr:
-
-```
-$ printf '%s' '{"...":"...","context_window":{"context_window_size":200000,
-  "used_percentage":10,"total_input_tokens":"abc"}}' | /bin/bash statusline.sh 2>&1 >/dev/null
-statusline.sh: line 23: [: abc: integer expression expected
-statusline.sh: line 24: [: abc: integer expression expected
-```
-
-The `test`/`[` sink does **not** command-inject (verified — only `$(( ))`
-does, per CR-01), so this is a robustness/noise defect, not a security one.
-But the harness asserts `stderr bytes == 0` on every fixture while no fixture
-carries a non-numeric numeric field, so the guard gap is uncovered.
-**Fix:** The `numbers // ""` jq guard from CR-01 also closes this — non-numbers
-become empty, seg renders hide-over-placeholder, no stderr. Optionally add a
-fixture with a non-numeric numeric field asserting clean stderr.
 
 ## Info
 
-### IN-01: Globals `NOW`, `LINE1`, `LINE2` not declared `local` in `main()`
+### IN-02: Branch literally named `(detached)` is misdetected as detached HEAD
 
-**File:** `statusline.sh:182,193,197,199`
-**Issue:** `main()` declares `local input vars sep model_seg dir_seg git_seg
-body` but `NOW`, `LINE1`, and `LINE2` are assigned without `local`, leaking to
-global scope. Harmless in this single-run-then-`exit` script, but inconsistent
-with the file's otherwise-careful scoping.
-**Fix:** Add them to the `local` declaration line for consistency:
-`local input vars sep model_seg dir_seg git_seg body NOW LINE1 LINE2`.
+**File:** `statusline.sh:111`
+**Issue:** `if [ "$label" = '(detached)' ]` treats the porcelain sentinel by
+string match, but `git check-ref-format --branch '(detached)'` confirms
+`(detached)` is a *valid* branch name. A repo on such a branch would render the
+short SHA instead of the branch name and suppress the sync glyph (D-25). This is
+a cosmetic edge case on a near-impossible branch name, not a correctness risk
+for real usage.
+**Fix:** If desired, distinguish the sentinel from a real branch by also
+checking `# branch.oid (initial)` / detached state via a dedicated porcelain
+signal, or accept the ambiguity as out-of-scope. Low priority.
 
 ---
 
-_Reviewed: 2026-08-21_
+_Reviewed: 2026-08-22_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
