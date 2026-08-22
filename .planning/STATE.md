@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-08-22)
 Phase: 4 — Fable Weekly f() Segment
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-08-22 — Phase 03 complete, transitioned to Phase 4
+Last activity: 2026-08-22 - Completed quick task 260822-rbm: sbx kit add install-only probe (Q-a FAIL: kit add refuses kits with files/; Q-b PASS: install-time merge survives the seed)
 
 Progress: [████████████████████] 9/9 plans ([███████░░░] 75%) — Phase 3 of 4 complete (75%)
 
@@ -91,6 +91,13 @@ None yet.
 ### Blockers/Concerns
 
 - [Phase 4]: OAuth usage endpoint is undocumented and reported unstable — confirm window key naming and `utilization` scale (0-1 vs 0-100) during phase planning
+- [sbx bump]: `sbx kit add` on v0.39.0 refuses any kit that ships `files/` (and any with `setup.startup`) — no kit shape can deliver statusline.sh via kit add today; re-run `tests/probe-kit-add.sh` on the next sbx release (install-only merge already proven to survive the create-time seed)
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260822-rbm | Probe install-only kit variant with sbx kit add (D-37a): does files/ + install-time statusLine merge land on an existing sandbox, and does the merge survive the create-time seed | 2026-08-22 | 5f20baf | [260822-rbm-probe-install-only-kit-variant-with-sbx-](./quick/260822-rbm-probe-install-only-kit-variant-with-sbx-/) |
 
 ### Roadmap Evolution
 
