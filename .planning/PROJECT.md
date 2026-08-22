@@ -12,17 +12,19 @@ One glance at the terminal tells you everything about the session: which model a
 
 ```text
 model_name (effort) · current_dir_name ⎇ current_git_branch branch_status ahead behind stash
-context_usage_pct/context_usage_tokens/window_size · usage_pct/5h (when_reset) · usage_pct/1w f(usage_pct) (when_reset)
+context_usage_pct/context_usage_tokens/window_size · usage_pct/5h (when_reset) · usage_pct/1w (when_reset) · Fable fable_pct/1w (fable_reset)
 ```
 
 Whole example:
 
 ```text
 Opus 5 (high) · myproject ⎇ main* ≡ ↓2 ↑3 #2
-10%/100k/1M · 50%/1w (2h:50m) · 15%/1w f(60%) (3d:5h:57m)
+10%/100k/1M · 50%/5h (2h:50m) · 15%/1w (3d:5h:57m) · Fable 74%/1w (2d:4h:30m)
 ```
 
 > Layout correction (Phase 2): the `╭─ `/`╰─ ` frame prefixes from the original design are removed — Phase 1 shipped with them; Phase 2 drops them.
+
+> Layout correction (Phase 4): the Fable weekly value is a separate last segment with its own countdown — `· Fable 74%/1w (2d:4h:30m)` — instead of the in-segment form the original brief described.
 
 Segment definitions:
 
@@ -36,7 +38,8 @@ Segment definitions:
 - `#N` — number of stashes
 - Context: `used%/used_tokens/window` with shortened numbers (`100k`, `1M`)
 - 5h limit: `used%/5h (reset countdown)`
-- Weekly limit: `used%/1w f(fable_used%) (reset countdown)` — `f()` is the Fable 5-specific weekly limit
+- Weekly limit: `used%/1w (reset countdown)`
+- Fable weekly: `Fable used%/1w (reset countdown)` — the Fable 5-specific weekly limit, rendered last on line 2 with its own countdown (Phase 4)
 
 ## Requirements
 
@@ -45,7 +48,7 @@ Segment definitions:
 - ✓ Line 1 renders model name (suffix-stripped), effort, and directory name — Phase 1
 - ✓ Line 2 renders context usage as percent / shortened tokens / shortened window size — Phase 1
 - ✓ Line 2 renders 5h rate-limit usage percent with reset countdown — Phase 1
-- ✓ Line 2 renders weekly rate-limit usage percent with reset countdown — Phase 1 (`f()` Fable percent deferred to Phase 4)
+- ✓ Line 2 renders weekly rate-limit usage percent with reset countdown — Phase 1 (Fable weekly segment added in Phase 4)
 - ✓ Stdin-derived segments with no data are hidden entirely, and the script never fails (exit 0, zero stderr, line 1 always renders) — Phase 1
 - ✓ Output is colorized with ANSI colors, thresholds shift green/yellow/red — Phase 1
 - ✓ Line 1 renders git branch with dirty marker, remote-sync symbol, ahead/behind counts, and stash count when in a git repo — Phase 2
@@ -56,7 +59,7 @@ Segment definitions:
 
 ### Active
 
-- [ ] Line 2 additionally renders Fable 5 weekly percent as `f()` in the weekly segment
+- [ ] Line 2 additionally renders the Fable 5 weekly percent and reset countdown as a separate `Fable pct/1w (countdown)` segment, last on line 2
 
 ### Out of Scope
 
@@ -86,7 +89,7 @@ Segment definitions:
 | ANSI-colorized output | Better glanceability (e.g. usage color can shift as limits fill) | ✓ Good — SGR 2 faint frame + 7-code palette confirmed readable in light and dark themes (UAT) |
 | ↓ = incoming (pull needed), ↑ = outgoing (push needed) | Confirmed with user against brief's wording | ✓ Applied — `↓N` behind (yellow) / `↑N` ahead (green) from `branch.ab`, hidden at zero (Phase 2) |
 | README-only install (symlink command), no install script | User preference; setup is a one-liner | ✓ Applied — `ln -sf` one-liner + `rm -f && cp` variant with overwrite warning; host UAT passed following only the README (Phase 3) |
-| Research the rate-limit data source before committing to one | Not part of the basic stdin payload; reliability unknown | ✓ Resolved — stdin `rate_limits.five_hour`/`.seven_day` covers 5h/1w; only Fable `f()` needs the OAuth endpoint (Phase 4) |
+| Research the rate-limit data source before committing to one | Not part of the basic stdin payload; reliability unknown | ✓ Resolved — stdin `rate_limits.five_hour`/`.seven_day` covers 5h/1w; only the Fable weekly segment needs the OAuth endpoint (Phase 4) |
 | Threshold color spans `NN%` only, reset before labels | Resolved plan action-text/verify contradiction in favor of the binding verify | ✓ Applied identically at all three percentage sites (Phase 1) |
 | SGR 2 (faint) for frame/separators | Theme-adaptive dim per D-02 without hardcoding a gray | ✓ Confirmed readable on light and dark themes (Phase 1 UAT) |
 | One `git status --porcelain=v2 --branch` + stash `rev-list`, all under `GIT_OPTIONAL_LOCKS=0`, uncached | One read-only ~12 ms process per render; never takes index locks while Claude itself runs git | ✓ 10 full renders ≤ 2 s budget (measured 0–1 s); session cache kept as a documented lever only (Phase 2) |

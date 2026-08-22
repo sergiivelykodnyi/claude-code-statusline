@@ -104,17 +104,18 @@ Plans:
 
 ### Phase 4: Fable Weekly f() Segment
 
-**Goal**: The weekly segment additionally shows Fable-specific usage as `f(pct)`, fetched and cached without ever risking or delaying the rest of the line
+**Goal**: Line 2 ends with a separate Fable weekly segment `Fable pct/1w (countdown)`, fetched from the OAuth usage data and cached without ever risking or delaying the rest of the line
 **Mode:** mvp
 **Depends on**: Phase 3
 **Requirements**: FAB-01, FAB-02, FAB-03, FAB-04
 **Research flag**: Needs research — undocumented `GET /api/oauth/usage` endpoint (confirm current window key and `utilization` scale), per-platform credential discovery (macOS Keychain vs `~/.claude/.credentials.json`), and sandbox credential presence must be verified during planning
 **Success Criteria** (what must be TRUE):
 
-  1. With valid OAuth credentials on the macOS host (Keychain), the weekly segment reads like `15%/1w f(60%) (3d:5h:57m)`
-  2. Inside a Docker Sandbox, the token is discovered from `~/.claude/.credentials.json` and `f()` renders the same way
-  3. On any failure — no credentials, endpoint change, timeout, offline — `f()` silently disappears while every other segment renders normally
+  1. With valid OAuth credentials on the macOS host (Keychain), line 2 ends like `15%/1w (3d:5h:57m) · Fable 60%/1w (2d:4h:30m)` — the Fable segment is a separate last peer with its own countdown
+  2. Inside a Docker Sandbox, the token is discovered from `~/.claude/.credentials.json` and the Fable segment renders the same way
+  3. On any failure — no credentials, endpoint change, timeout, offline — the Fable segment silently disappears while every other segment renders normally
   4. Repeated renders within the cache TTL make no network call, and a cold fetch never delays the render beyond its short curl timeout
+  5. Layout correction (D-51): the brief's in-segment notation is superseded by the separate `Fable pct/1w (countdown)` segment rendered last on line 2 — REQUIREMENTS.md, PROJECT.md and README reconciled
 
 **Plans**: 2/4 plans executed
 
