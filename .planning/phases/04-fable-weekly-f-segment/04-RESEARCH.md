@@ -523,11 +523,11 @@ Harness block (`tests/run.sh` new §11, all under `/bin/bash`, all with `STATUSL
 | A4 | Future stdin `model_scoped` (if ever projected into the statusline payload) keeps `{display_name, utilization 0–100, resets_at ISO}` as in `klr`/`rpo` | Pattern 1 | Stdin branch would mis-scale or miss; endpoint fallback still works because stdin values would be empty → re-verify when Claude Code changes |
 | A5 | Concurrent renders racing on the fetch (N sessions, same TTL edge) are benign — last `mv` wins, at most N duplicate fetches once per TTL | Pattern 5 | Slightly more calls than "1 per TTL per machine" at the edge; no correctness issue |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Cache-path location when `$HOME/.claude` is missing** — `mkdir -p` it, or hide? Recommendation: `mkdir -p` (0755 default; file is 0600 anyway) — Claude Code creates the directory before any statusline runs, so this is theoretical.
-2. **Should the `expiresAt` pre-check be included?** It saves a guaranteed-401 round trip between token expiry and Claude Code's refresh (expiry observed ~6.7–7.8 h out on both hosts). Recommendation: include — 1 jq field, zero risk; hide on expiry is consistent with D-62.
-3. **ROADMAP SC1 wording** — D-52 lists REQUIREMENTS/PROJECT/README only; planner decides whether to touch ROADMAP.
+1. **Cache-path location when `$HOME/.claude` is missing** — `mkdir -p` it, or hide? Recommendation: `mkdir -p` (0755 default; file is 0600 anyway) — Claude Code creates the directory before any statusline runs, so this is theoretical. **RESOLVED: `mkdir -p` adopted** — `write_cache` runs `mkdir -p "${FAB_CACHE%/*}" 2>/dev/null` before the `mktemp` template (04-01-PLAN.md Task 1, step 3 `write_cache`); the file itself stays 0600 via `mktemp` + `mv -f`.
+2. **Should the `expiresAt` pre-check be included?** It saves a guaranteed-401 round trip between token expiry and Claude Code's refresh (expiry observed ~6.7–7.8 h out on both hosts). Recommendation: include — 1 jq field, zero risk; hide on expiry is consistent with D-62. **RESOLVED: included** — `get_token`'s single guarded jq program prints the token only when `.claudeAiOauth.expiresAt` (if numeric, epoch ms) / 1000 is still greater than `$NOW`; a missing or non-numeric `expiresAt` never blocks (04-01-PLAN.md Task 1, step 3 `get_token`); pinned by the harness probes `fable: expired token hidden` / `fable: expired token no cache` (04-02-PLAN.md Task 1, step 4).
+3. **ROADMAP SC1 wording** — D-52 lists REQUIREMENTS/PROJECT/README only; planner decides whether to touch ROADMAP. **RESOLVED: ROADMAP is reconciled too** — the Phase 4 goal and success criteria 1-3 are reworded to the D-51 separate-segment form and a criterion 5 records the layout correction, via scoped edits to the Phase 4 block only (04-04-PLAN.md Task 2, per D-52; the plan list is left to the orchestrator).
 
 ## Environment Availability
 
