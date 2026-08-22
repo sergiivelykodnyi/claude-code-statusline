@@ -155,6 +155,38 @@ check_eq "injection probe: exit code" "0" "$rc"
 check_ok "injection probe: tests/.pwned not created" $?
 rm -f tests/.pwned
 
+# 7.2 Arithmetic-reachable numeric fields (CR-01 regression). A string of
+# the form x[$(cmd)] reaching a $(( )) sink is command-substituted as an
+# array subscript by bash 3.2.57 — so these MUST run under /bin/bash (the
+# host 3.2), where newer bash would hide the defect. The jq numeric guard
+# at the ingestion boundary must empty the field before it gets there.
+for spec in 'five_hour resets_at:.rate_limits.five_hour.resets_at' \
+            'seven_day resets_at:.rate_limits.seven_day.resets_at' \
+            'context_window total_input_tokens:.context_window.total_input_tokens' \
+            'context_window context_window_size:.context_window.context_window_size' \
+            'context_window used_percentage:.context_window.used_percentage'; do
+  label=${spec%%:*}; path=${spec#*:}
+  rm -f tests/.pwned
+  jq "$path = \"x[\$(touch tests/.pwned)]\"" \
+     tests/fixtures/full.json | /bin/bash "$SL" > /dev/null 2>&1
+  rc=$?
+  check_eq "injection probe: $label exit code" "0" "$rc"
+  [ ! -e tests/.pwned ]
+  check_ok "injection probe: $label tests/.pwned not created" $?
+done
+rm -f tests/.pwned
+
+# 7.3 Non-numeric numeric field (WR-02): must render hide-over-placeholder
+# (empty CTX_TOK -> 0) with zero stderr — no 'integer expression expected'.
+out=$(jq '.context_window.total_input_tokens = "abc"' tests/fixtures/full.json \
+        | /bin/bash "$SL" 2>"$ERRTMP")
+errbytes=$(wc -c < "$ERRTMP" | tr -d '[:space:]')
+check_eq "non-numeric probe: total_input_tokens stderr bytes" "0" "$errbytes"
+check_eq "non-numeric probe: total_input_tokens line 1" "Opus 5 (high) · myproject" \
+  "$(printf '%s\n' "$out" | strip_ansi | sed -n 1p)"
+check_eq "non-numeric probe: total_input_tokens line 2" "10%/0/1M · 50%/5h (now) · 15%/1w (now)" \
+  "$(printf '%s\n' "$out" | strip_ansi | sed -n 2p)"
+
 # --- 8. Git-state matrix (GIT-01..06, D-17..D-27) ----------------------------
 # Real temp repos under $TESTTMP, built hermetically with a config-isolated
 # git wrapper so host config (gpgsign, hooks, init.defaultBranch) cannot
