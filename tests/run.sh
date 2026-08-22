@@ -187,6 +187,36 @@ check_eq "non-numeric probe: total_input_tokens line 1" "Opus 5 (high) · myproj
 check_eq "non-numeric probe: total_input_tokens line 2" "10%/0/1M · 50%/5h (now) · 15%/1w (now)" \
   "$(printf '%s\n' "$out" | strip_ansi | sed -n 2p)"
 
+# 7.4 Array payload (CR-02 regression). The injected value is the JSON array
+# ["","touch","tests/.pwned"]: jq @sh quotes each ARRAY ELEMENT as its own
+# word, so an unguarded array value fans out into extra eval words
+# (MODEL='' 'touch' 'tests/.pwned') and eval runs the tail as a command. The
+# jq string / numeric type guards at the ingestion boundary must collapse any
+# array to a single empty word before eval sees it. Every one of the 10
+# @sh-ingested fields is probed, and every probe runs under /bin/bash (the
+# host 3.2.57 production interpreter) — the defect is in how eval parses
+# the multi-word @sh output, so the real interpreter must be exercised.
+for spec in 'model display_name:.model.display_name' \
+            'effort level:.effort.level' \
+            'workspace current_dir:.workspace.current_dir' \
+            'context_window used_percentage:.context_window.used_percentage' \
+            'context_window total_input_tokens:.context_window.total_input_tokens' \
+            'context_window context_window_size:.context_window.context_window_size' \
+            'five_hour used_percentage:.rate_limits.five_hour.used_percentage' \
+            'five_hour resets_at:.rate_limits.five_hour.resets_at' \
+            'seven_day used_percentage:.rate_limits.seven_day.used_percentage' \
+            'seven_day resets_at:.rate_limits.seven_day.resets_at'; do
+  label=${spec%%:*}; path=${spec#*:}
+  rm -f tests/.pwned
+  jq "$path = [\"\",\"touch\",\"tests/.pwned\"]" \
+     tests/fixtures/full.json | /bin/bash "$SL" > /dev/null 2>&1
+  rc=$?
+  check_eq "array probe: $label exit code" "0" "$rc"
+  [ ! -e tests/.pwned ]
+  check_ok "array probe: $label tests/.pwned not created" $?
+done
+rm -f tests/.pwned
+
 # --- 8. Git-state matrix (GIT-01..06, D-17..D-27) ----------------------------
 # Real temp repos under $TESTTMP, built hermetically with a config-isolated
 # git wrapper so host config (gpgsign, hooks, init.defaultBranch) cannot
