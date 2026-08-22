@@ -1,18 +1,18 @@
 ---
 gsd_state_version: 1.0
-current_phase: 3
+current_phase: 03
 current_phase_name: Install & Dual-Environment Validation
 status: executing
-stopped_at: Phase 3 context gathered
-last_updated: "2026-08-22T11:49:07.462Z"
+stopped_at: Completed 03-01-PLAN.md
+last_updated: "2026-08-22T12:03:05.435Z"
 last_activity: 2026-08-22
-last_activity_desc: Phase 02 complete, transitioned to Phase 3
-state_head: 74fa24ba1e42596b0f1936e4cf075a6aebf68f08
+last_activity_desc: Phase 03 execution started
+state_head: cf9bc74d0a4a3c769da720bf230120e376040f3b
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 9
-  completed_plans: 6
+  completed_plans: 7
   percent: 50
 ---
 
@@ -27,10 +27,10 @@ See: .planning/PROJECT.md (updated 2026-08-22)
 
 ## Current Position
 
-Phase: 3 (Install & Dual-Environment Validation) — READY TO EXECUTE
-Plan: Not started
+Phase: 03 (Install & Dual-Environment Validation) — EXECUTING
+Plan: 2 of 3
 Status: Ready to execute
-Last activity: 2026-08-22 — Phase 02 complete, transitioned to Phase 3
+Last activity: 2026-08-22 — Phase 03 execution started
 
 Progress: [████████████████████] 6/6 plans ([█████░░░░░] 50%) — Phase 2 of 4 complete (50%)
 
@@ -65,6 +65,7 @@ Progress: [████████████████████] 6/6 pla
 | Phase 02 P02 | 5 min | 2 tasks | 1 files |
 | Phase 02 P03 | 3 min | 2 tasks | 2 files |
 | Phase 02 P04 | 4 min | 3 tasks | 2 files |
+| Phase 03 P01 | 5 min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -82,6 +83,8 @@ Recent decisions affecting current work:
 - [Phase 02]: All 10 stdin fields type-guarded inside the single jq `@sh` program — `strings` on MODEL/EFFORT/DIR (CR-02 array-vector RCE), `def uint` floor/non-negative/<1e15 on the 7 numerics (CR-01 resets_at RCE + WR-03 stderr leak) — one choke point, one jq pass, byte-identical renders
 - [Phase 02]: Harness convention: security probes assert on fixed PASS-line names, run under /bin/bash 3.2.57, and are proven to bite against the pre-fix script (suite 82 → 125 checks)
 - [Phase 02]: UAT passed 2/2 (git color legibility both themes; prohibition sign-off) — security verified 14/14 closed, threats_open: 0 (02-SECURITY.md)
+- [Phase 03]: Phase 3 kit lives at kit/ (sbx mixin, schemaVersion 2); canonical statusline.sh relocated there by pure git mv (100755, byte-identical, no root shim); startup reconcile = themeId wait + jq merge of only .statusLine + atomic mv + chmod 0755 + non-recursive chown
+- [Phase 03]: Cross-environment evidence via tests/render-fixtures.sh raw renders under gitignored tests/out/<env>/, compared with POSIX diff -r; harness exec-bit check proven to bite (126 checks)
 
 ### Pending Todos
 
@@ -106,6 +109,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-08-22T10:50:11.592Z
-Stopped at: Phase 3 context gathered
-Resume file: .planning/phases/03-install-dual-environment-validation/03-CONTEXT.md
+Last session: 2026-08-22T12:03:05.357Z
+Stopped at: Completed 03-01-PLAN.md
+Resume file: None
