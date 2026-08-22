@@ -3,6 +3,24 @@
 # Reads the Claude Code JSON payload on stdin, prints two ANSI-colorized
 # lines to stdout, always exits 0. bash 3.2-compatible (macOS /bin/bash).
 # No set -e / set -u: an aborting probe would blank the whole line.
+#
+# Env inputs (Fable weekly segment, FAB-01..04 — D-64/D-65; defaults are the
+# production values, the overrides exist for tests and opt-out):
+#   STATUSLINE_NO_FABLE          non-empty -> kill switch: no credential read,
+#                                no network, Fable segment hidden (D-64)
+#   STATUSLINE_USAGE_URL         OAuth usage endpoint
+#                                (default: https://api.anthropic.com/api/oauth/usage)
+#   STATUSLINE_CREDENTIALS_FILE  credentials JSON (.claudeAiOauth.accessToken)
+#                                (default: $HOME/.claude/.credentials.json, then
+#                                the macOS Keychain item "Claude Code-credentials");
+#                                when set explicitly it is the ONLY source — no
+#                                Keychain fallback, so tests stay deterministic
+#   STATUSLINE_USAGE_CACHE       shared per-user cache file, 0600, written
+#                                atomically; TTL 300 s (D-56), stale-while-error
+#                                grace 3600 s (D-58)
+#                                (default: $HOME/.claude/statusline-usage-cache.json)
+#   STATUSLINE_CURL_MAX_TIME     curl --max-time in seconds (default: 2; test
+#                                knob, D-59)
 
 # --- ANSI named-16 palette (D-02: theme-remapped colors only) ---------------
 RESET=$'\033[0m'
@@ -43,6 +61,43 @@ fmt_duration() {
   if [ "$d" -gt 0 ]; then printf '%sd:%sh:%sm' "$d" "$h" "$m"
   elif [ "$h" -gt 0 ]; then printf '%sh:%sm' "$h" "$m"
   else printf '%sm' "$m"; fi
+}
+
+# iso_to_epoch ISO -> epoch seconds, or "" when unparseable (D-54). Accepts
+# YYYY-MM-DDTHH:MM:SS[.frac][Z|±HH:MM|±HHMM|<none>=UTC]; days-from-civil
+# (Hinnant) in pure arithmetic: proleptic Gregorian, BSD/GNU-neutral, no
+# date(1) at all. Prints nothing and returns 0 on any unparseable input.
+iso_to_epoch() {
+  local s=$1 y m d H M S rest sign oh om off era yoe doy doe days
+  case "$s" in
+    [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9][Tt][0-9][0-9]:[0-9][0-9]:[0-9][0-9]*) ;;
+    *) return 0 ;;
+  esac
+  y=${s:0:4}; m=${s:5:2}; d=${s:8:2}; H=${s:11:2}; M=${s:14:2}; S=${s:17:2}
+  rest=${s:19}
+  if [ "${rest:0:1}" = "." ]; then                 # drop fractional seconds
+    rest=${rest#.}
+    while [ -n "$rest" ]; do case "$rest" in [0-9]*) rest=${rest#?} ;; *) break ;; esac; done
+  fi
+  off=0
+  case "$rest" in
+    ''|Z|z) ;;
+    [+-][0-9][0-9]:[0-9][0-9]) sign=${rest:0:1}; oh=${rest:1:2}; om=${rest:4:2}
+      off=$(( 10#$oh * 3600 + 10#$om * 60 )); [ "$sign" = "+" ] && off=$(( -off )) ;;
+    [+-][0-9][0-9][0-9][0-9]) sign=${rest:0:1}; oh=${rest:1:2}; om=${rest:3:2}
+      off=$(( 10#$oh * 3600 + 10#$om * 60 )); [ "$sign" = "+" ] && off=$(( -off )) ;;
+    *) return 0 ;;
+  esac
+  y=$(( 10#$y )); m=$(( 10#$m )); d=$(( 10#$d )); H=$(( 10#$H )); M=$(( 10#$M )); S=$(( 10#$S ))
+  [ "$m" -ge 1 ] && [ "$m" -le 12 ] && [ "$d" -ge 1 ] && [ "$d" -le 31 ] \
+    && [ "$H" -le 23 ] && [ "$M" -le 59 ] && [ "$S" -le 60 ] || return 0
+  [ "$m" -le 2 ] && y=$(( y - 1 ))
+  era=$(( y / 400 )); yoe=$(( y - era * 400 ))
+  if [ "$m" -gt 2 ]; then doy=$(( (153 * (m - 3) + 2) / 5 + d - 1 ))
+  else doy=$(( (153 * (m + 9) + 2) / 5 + d - 1 )); fi
+  doe=$(( yoe * 365 + yoe / 4 - yoe / 100 + doy ))
+  days=$(( era * 146097 + doe - 719468 ))
+  printf '%s' $(( days * 86400 + H * 3600 + M * 60 + S + off ))
 }
 
 # pct_color INT -> echoes the threshold color; caller wraps ONLY the number
@@ -158,6 +213,144 @@ seg_1w() {
   printf '%s' "$out"
 }
 
+# Fable weekly segment "Fable pct/1w (countdown)" — a full peer rendered last
+# on line 2: dim literal label, threshold colour on the number only, "/1w"
+# and its own reset countdown plain; hidden (with its separator) whenever the
+# collector found no value (FAB-01, D-51, D-53, D-54, D-55).
+seg_fable() {
+  [ -n "$FAB_PCT" ] || return 0
+  local pct=${FAB_PCT%.*} out
+  [ -z "$pct" ] && pct=0                      # guard before arithmetic
+  out="${DIM}Fable${RESET} $(pct_color "$pct")${pct}%${RESET}/1w"
+  [ -n "$FAB_RST" ] && out="${out} ($(fmt_duration $(( FAB_RST - NOW ))))"
+  printf '%s' "$out"
+}
+
+# --- Fable weekly adapter (FAB-01..04, D-47..D-65) --------------------------
+# One collector behind one seam: kill switch -> stdin model_scoped (D-48) ->
+# fresh TTL cache (D-56/D-57) -> one bounded curl with the OAuth token
+# (D-59..D-62) -> atomic 0600 cache write, negative results included (D-49)
+# -> stale-while-error grace (D-58) -> hidden. Every failure path leaves
+# FAB_PCT empty, so seg_fable hides and nothing else on the line changes
+# (FAB-04). No background work, no retries, no sleeps.
+FAB_TTL=300                                   # cache freshness, seconds (D-56)
+FAB_GRACE=3600                                # stale-while-error window, seconds (D-58)
+FAB_MAXTIME=${STATUSLINE_CURL_MAX_TIME:-2}    # curl --max-time, seconds (D-59)
+FAB_URL=${STATUSLINE_USAGE_URL:-https://api.anthropic.com/api/oauth/usage}
+FAB_CACHE=${STATUSLINE_USAGE_CACHE:-$HOME/.claude/statusline-usage-cache.json}  # absolute path (D-57, D-65)
+
+# get_token -> prints the OAuth access token or nothing (D-60, D-62). Source
+# order: $STATUSLINE_CREDENTIALS_FILE when set (this file only), else
+# $HOME/.claude/.credentials.json, else the macOS Keychain item. One guarded
+# jq program per source: the token must be a non-empty string and, when
+# .claudeAiOauth.expiresAt is a number (epoch ms), still in the future —
+# a missing or non-numeric expiresAt never blocks. Any non-empty string is a
+# token (the sandbox proxy credential is short). Read-only: the token is
+# never refreshed, never printed, never stored; read only when a fetch is
+# actually needed.
+get_token() {
+  local f=${STATUSLINE_CREDENTIALS_FILE:-} t
+  local prog='.claudeAiOauth? // {} | objects
+    | (.accessToken? // "" | strings // "") as $t
+    | (.expiresAt? | numbers // (($now + 1) * 1000)) as $e
+    | select($t != "" and ($e / 1000) > $now) | $t'
+  if [ -n "$f" ]; then                        # explicit file: the only source
+    t=$(jq -r --argjson now "$NOW" "$prog" "$f" 2>/dev/null)
+  else
+    t=$(jq -r --argjson now "$NOW" "$prog" "$HOME/.claude/.credentials.json" 2>/dev/null)
+    if [ -z "$t" ] && command -v security >/dev/null 2>&1; then
+      t=$(security find-generic-password -s "Claude Code-credentials" -w 2>/dev/null \
+          | jq -r --argjson now "$NOW" "$prog" 2>/dev/null)
+    fi
+  fi
+  printf '%s' "$t"
+}
+
+# read_cache -> C_AT C_PCT C_RST from $FAB_CACHE, "" when absent or unusable
+# (D-57). A separate guarded jq program with the same uint guard as the stdin
+# pass: a garbage / hostile cache parses to empties, and eval only ever sees
+# one quoted word per assignment.
+read_cache() {
+  local v
+  C_AT=""; C_PCT=""; C_RST=""
+  [ -r "$FAB_CACHE" ] || return 0
+  v=$(jq -r 'def uint: (numbers | floor | select(. >= 0 and . < 1e15)) // "";
+             @sh "C_AT=\(.fetched_at // "" | uint) C_PCT=\(.pct // "" | uint) C_RST=\(.resets_at // "" | uint)"' \
+        "$FAB_CACHE" 2>/dev/null)
+  eval "$v"                                   # empty on non-JSON -> all stay ""
+}
+
+# write_cache PCT RST -> atomic 0600 write of {"fetched_at","pct","resets_at"}
+# (D-57): mktemp template in the cache's own directory (0600 by default on
+# BSD and GNU — no umask dance) + mv -f, so a concurrent reader sees the old
+# or the new complete file and a symlink is replaced, never followed. Empty
+# PCT/RST become JSON null (negative result, D-49). The body was fetched into
+# a variable first, so the temp file lives for microseconds and a render
+# cancelled mid-curl leaves no orphan.
+write_cache() {
+  local tmp
+  mkdir -p "${FAB_CACHE%/*}" 2>/dev/null
+  tmp=$(mktemp "${FAB_CACHE%/*}/.usage.XXXXXX" 2>/dev/null) || return 1
+  printf '{"fetched_at":%s,"pct":%s,"resets_at":%s}\n' "$NOW" "${1:-null}" "${2:-null}" > "$tmp" 2>/dev/null \
+    && mv -f "$tmp" "$FAB_CACHE" 2>/dev/null || rm -f "$tmp" 2>/dev/null
+}
+
+# fetch_usage -> 0 with F_PCT / F_RST_ISO set (both may be "" = the endpoint
+# answered but has no Fable bucket), 1 on any failure: no curl, no token,
+# curl error / non-2xx / timeout, empty or non-JSON body (D-59, D-62,
+# FAB-02). The three headers reach curl as a -K - config on stdin from a
+# builtin printf, so the token never enters any process argv; TLS
+# verification and the proxy environment are left untouched (the sandbox
+# egress rides HTTPS_PROXY). The body is parsed by a separate guarded jq
+# program: first limits[] entry of kind weekly_scoped whose
+# scope.model.display_name starts with "fable", case-insensitive (D-47,
+# D-50); percent is already 0-100, no scaling.
+fetch_usage() {
+  local tok body v
+  F_PCT=""; F_RST_ISO=""
+  command -v curl >/dev/null 2>&1 || return 1
+  tok=$(get_token)
+  [ -n "$tok" ] || return 1
+  body=$(printf 'header = "Authorization: Bearer %s"\nheader = "anthropic-beta: oauth-2025-04-20"\nheader = "Content-Type: application/json"\n' "$tok" \
+         | curl -s -f --max-time "$FAB_MAXTIME" -K - "$FAB_URL" 2>/dev/null) || return 1
+  [ -n "$body" ] || return 1
+  v=$(printf '%s' "$body" | jq -r '
+    def uint: (numbers | floor | select(. >= 0 and . < 1e15)) // "";
+    ( [ .limits? // [] | arrays[]? | objects
+        | select(.kind == "weekly_scoped"
+                 and ((.scope?.model?.display_name? // "" | strings // "") | ascii_downcase | startswith("fable"))) ]
+      | first // {} ) as $b
+    | @sh "F_PCT=\($b.percent // "" | uint) F_RST_ISO=\($b.resets_at // "" | strings // "")"' 2>/dev/null)
+  [ -n "$v" ] || return 1                     # non-JSON body -> no output -> failure
+  eval "$v"
+}
+
+# get_fable_weekly -> FAB_PCT / FAB_RST (epoch) or "" (D-48, D-55, D-58,
+# D-59, D-64). Called directly in main's shell (never inside $(...)) so
+# seg_fable sees the result by dynamic scope. Order: kill switch -> stdin
+# model_scoped (no cache, no network) -> fresh cache (a fresh negative entry
+# serves "" -> hidden, no network) -> fetch + cache write -> stale-while-error
+# grace -> hidden.
+get_fable_weekly() {
+  FAB_PCT=""; FAB_RST=""
+  [ -n "${STATUSLINE_NO_FABLE:-}" ] && return 0   # D-64: nothing else runs
+  if [ -n "$FAB_SI_PCT" ]; then               # D-48: stdin first
+    FAB_PCT=$FAB_SI_PCT; FAB_RST=$(iso_to_epoch "$FAB_SI_RST"); return 0
+  fi
+  read_cache
+  if [ -n "$C_AT" ] && [ $(( NOW - C_AT )) -lt "$FAB_TTL" ]; then
+    FAB_PCT=$C_PCT; FAB_RST=$C_RST; return 0  # fresh hit, negative included
+  fi
+  if fetch_usage; then
+    FAB_PCT=$F_PCT; FAB_RST=$(iso_to_epoch "$F_RST_ISO")
+    write_cache "$FAB_PCT" "$FAB_RST"; return 0  # negative result cached too (D-49)
+  fi
+  if [ -n "$C_AT" ] && [ $(( NOW - C_AT )) -lt "$FAB_GRACE" ]; then
+    FAB_PCT=$C_PCT; FAB_RST=$C_RST            # D-58: stale-while-error
+  fi
+  return 0
+}
+
 # --- Main -------------------------------------------------------------------
 
 main() {
@@ -176,7 +369,7 @@ main() {
   # 1e2 -> 100, 1e100 -> empty). Every assignment eval sees is therefore
   # exactly one quoted word or empty. Do not branch on jq's exit code (empty
   # stdin exits 0 with no output).
-  local input vars sep model_seg dir_seg git_seg body NOW LINE1 LINE2
+  local input vars sep model_seg dir_seg git_seg body NOW LINE1 LINE2 FAB_PCT FAB_RST
   input=$(cat)
   vars=$(printf '%s' "$input" | jq -r '
     def uint: (numbers | floor | select(. >= 0 and . < 1e15)) // "";
@@ -195,6 +388,7 @@ main() {
   eval "$vars"
 
   NOW=$(date +%s)                             # single date call, reused for both windows (LIM-03)
+  get_fable_weekly                            # in main's shell: sets FAB_PCT / FAB_RST for seg_fable
 
   sep=" ${DIM}·${RESET} "                     # dim separator (D-01)
 
@@ -207,7 +401,7 @@ main() {
   body=$(join_segments "$sep" "$model_seg" "$dir_seg")
   LINE1="${body}${RESET}"
 
-  body=$(join_segments "$sep" "$(seg_context)" "$(seg_5h)" "$(seg_1w)")
+  body=$(join_segments "$sep" "$(seg_context)" "$(seg_5h)" "$(seg_1w)" "$(seg_fable)")  # Fable last (D-51)
   if [ -n "$body" ]; then
     LINE2="${body}${RESET}"
   else

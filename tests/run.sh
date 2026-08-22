@@ -11,6 +11,9 @@
 
 cd "$(dirname "$0")/.." || exit 1
 SL=kit/files/home/.claude/statusline.sh
+# Kill switch (D-64): every render below must stay network-free and
+# Keychain-free; the Fable probe block overrides it per command.
+export STATUSLINE_NO_FABLE=1
 
 CHECKS=0
 FAILS=0

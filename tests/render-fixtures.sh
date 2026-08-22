@@ -26,9 +26,12 @@
 # basename, identical in the sandbox because the workspace is mounted at the
 # same absolute path. Raw bytes are compared on purpose: PORT-01 "identical
 # output" includes the color codes, so nothing is stripped here.
+# The Fable path is disabled by the exported kill switch (D-64), so the dumps
+# never depend on network reachability or credentials in either environment.
 
 cd "$(dirname "$0")/.." || exit 1
 SL=kit/files/home/.claude/statusline.sh
+export STATUSLINE_NO_FABLE=1   # D-64: dumps never depend on network or credentials
 OUT=${1:?usage: tests/render-fixtures.sh OUTDIR}
 INSTALLED=${INSTALLED:-$HOME/.claude/statusline.sh}
 
