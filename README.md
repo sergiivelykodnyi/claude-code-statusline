@@ -6,10 +6,10 @@ A two-line bash status line for Claude Code: model and effort, directory, git st
 
 ```text
 Opus 5 (high) · myproject ⎇ main* ≡ ↓2 ↑3 #2
-10%/100k/1M · 50%/5h (2h:50m) · 15%/1w (3d:5h:57m)
+10%/100k/1M · 50%/5h (2h:50m) · 15%/1w (3d:5h:57m) · Fable 74%/1w (2d:4h:30m)
 ```
 
-Percentages turn yellow at 70% and red at 90%; segments with no data (no git repo, no effort, no rate-limit data yet) disappear together with their separators.
+Percentages turn yellow at 70% and red at 90%; segments with no data (no git repo, no effort, no rate-limit data yet, no Fable usage data (no OAuth login)) disappear together with their separators.
 
 ## Symbol legend
 
@@ -26,6 +26,7 @@ Percentages turn yellow at 70% and red at 90%; segments with no data (no git rep
 | `10%/100k/1M` | Context used as percent / tokens / window size |
 | `50%/5h (2h:50m)` | 5-hour rate-limit usage and time to reset |
 | `15%/1w (3d:5h:57m)` | Weekly rate-limit usage and time to reset |
+| `Fable 74%/1w (2d:4h:30m)` | Fable-specific weekly usage and time to reset, read from the Claude Code OAuth usage data; needs the Claude Code OAuth login (Max/Pro), hidden otherwise |
 
 ## Install on the host
 
@@ -65,9 +66,20 @@ echo '{"model":{"display_name":"Opus 5 (1M context)"},"effort":{"level":"high"},
 # expect (colored):
 # Opus 5 (high) · myproject
 # 10%/100k/1M · 50%/5h (now) · 15%/1w (now)
+# plus "· Fable NN%/1w (…)" at the end of line 2 when your OAuth credentials are available
 ```
 
 If the line stays blank in Claude Code, run `claude --debug` (it logs the script's exit code/stderr and workspace-trust skips) and check `chmod +x ~/.claude/statusline.sh`.
+
+## Fable weekly segment
+
+The last segment on line 2 — `· Fable 74%/1w (2d:4h:30m)` in the example above — shows the Fable-specific weekly limit. It comes from the same Claude Code OAuth login the rest of Claude Code uses — no extra setup, nothing to configure — and it behaves like every other segment: present when the data is there, gone (with its separator) when it is not.
+
+- **Token source:** the script reads the Claude Code OAuth token from `~/.claude/.credentials.json` first, then from the macOS Keychain item `Claude Code-credentials` (via the `security` CLI). The token is read-only: never refreshed, never printed, never stored anywhere else.
+- **Fetch and cache:** at most one request every 5 minutes to `https://api.anthropic.com/api/oauth/usage`, with a 2-second timeout; the answer is cached with mode 0600 in `~/.claude/statusline-usage-cache.json`. If a refresh fails (offline, timeout, rejected token), the last value is kept for up to an hour, then the segment hides.
+- **Kill switch:** set `STATUSLINE_NO_FABLE=1` — in your shell or under the `"env"` key of `~/.claude/settings.json` — to disable the segment entirely (no credential read, no network).
+- **macOS Keychain prompt:** the first read may show one Keychain dialog for the `Claude Code-credentials` item — click "Always Allow" once and it will not ask again.
+- **Docker Sandboxes:** the segment renders when `/home/agent/.claude/.credentials.json` exists inside the sandbox (created by the sbx `anthropic` secret or by `/login` inside the sandbox) and is hidden otherwise; the kit never copies or forwards the host token.
 
 ## Install in Docker Sandboxes
 
@@ -93,6 +105,6 @@ The status line shows up after the first message in the sandbox; the same verify
 
 ## Requirements
 
-- bash 3.2+ (macOS `/bin/bash` is fine), `jq`, `git`
+- bash 3.2+ (macOS `/bin/bash` is fine), `jq`, `git`, `curl`
 - Claude Code ≥ 2.1.x (rate-limit fields and `refreshInterval`)
 - For sandboxes: Docker Sandboxes `sbx` ≥ 0.39 (kit spec v2)
