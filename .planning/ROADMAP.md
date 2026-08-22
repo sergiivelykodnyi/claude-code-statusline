@@ -58,7 +58,7 @@ Plans:
   4. A full render completes well under the ~300ms debounce, using a single jq pass and one primary git status call
   5. Layout correction: the `╭─ ` and `╰─ ` frame prefixes are removed — both lines render without leading box-drawing frame characters, with all other segments, separators, and colors unchanged
 
-**Plans**: 3 plans (2 executed, 1 gap-closure pending)
+**Plans**: 3/3 plans executed (2 executed, 1 gap-closure pending)
 
 Plans:
 **Wave 1**
@@ -71,7 +71,7 @@ Plans:
 
 **Gap closure** *(from 02-VERIFICATION.md: CR-01 RCE + WR-01/WR-02)*
 
-- [ ] 02-03-PLAN.md — Enforce numeric type at the jq @sh boundary (closes the resets_at command-injection RCE + stderr leak) and extend the harness injection probe to resets_at + a non-numeric-field stderr probe
+- [x] 02-03-PLAN.md — Enforce numeric type at the jq @sh boundary (closes the resets_at command-injection RCE + stderr leak) and extend the harness injection probe to resets_at + a non-numeric-field stderr probe
 
 ### Phase 3: Install & Dual-Environment Validation
 
@@ -112,6 +112,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Core Status Line from Stdin | 2/2 | Complete    | 2026-08-21 |
-| 2. Git Segment | 2/2 | In Progress|  |
+| 2. Git Segment | 3/3 | In Progress|  |
 | 3. Install & Dual-Environment Validation | 0/? | Not started | - |
 | 4. Fable Weekly f() Segment | 0/? | Not started | - |
