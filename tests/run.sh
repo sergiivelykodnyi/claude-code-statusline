@@ -239,10 +239,13 @@ check_eq "non-numeric probe: total_input_tokens line 2" "10%/0/1M · 50%/5h (now
 # word, so an unguarded array value fans out into extra eval words
 # (MODEL='' 'touch' 'tests/.pwned') and eval runs the tail as a command. The
 # jq string / numeric type guards at the ingestion boundary must collapse any
-# array to a single empty word before eval sees it. Every one of the 10
-# @sh-ingested fields is probed, and every probe runs under /bin/bash (the
-# host 3.2.57 production interpreter) — the defect is in how eval parses
-# the multi-word @sh output, so the real interpreter must be exercised.
+# array to a single empty word before eval sees it. All 12 @sh-ingested fields
+# are probed: the 10 stdin fields below here, plus the two
+# rate_limits.model_scoped fields (FAB_SI_PCT / FAB_SI_RST) in section 11,
+# which need the kill switch off to reach the arithmetic sinks. Every probe
+# runs under /bin/bash (the host 3.2.57 production interpreter) — the defect
+# is in how eval parses the multi-word @sh output, so the real interpreter
+# must be exercised.
 for spec in 'model display_name:.model.display_name' \
             'effort level:.effort.level' \
             'workspace current_dir:.workspace.current_dir' \
@@ -622,6 +625,98 @@ check_eq "fable: timeout hidden" "$L2_BASE" "$(printf '%s\n' "$out" | strip_ansi
 check_eq "fable: timeout stderr bytes" "0" "$errbytes"
 [ $(( t1 - t0 )) -le 3 ]
 check_ok "fable: timeout wall <= 3s" $?
+
+# 11.11 Security probes (T-04-03) — the three new untrusted inputs (stdin
+# model_scoped, the cache file, the endpoint body) under /bin/bash 3.2.57:
+# every payload must exit 0, leave tests/.pwned absent, print 0 stderr
+# bytes, and never reach the $(( )) / eval sinks. The kill switch is off
+# (otherwise model_scoped is never read) and credentials are absent or
+# synthetic, so a hidden segment is the expected shape.
+
+# stdin injection on the two numeric/ISO model_scoped fields (CR-01 shape):
+# the uint guard empties utilization; resets_at is a string by contract and
+# is only ever consumed by iso_to_epoch's case patterns, never arithmetic.
+for spec in 'utilization:.rate_limits.model_scoped[0].utilization' \
+            'resets_at:.rate_limits.model_scoped[0].resets_at'; do
+  label=${spec%%:*}; path=${spec#*:}
+  rm -f tests/.pwned "$CACHE"
+  jq "$path = \"x[\$(touch tests/.pwned)]\"" tests/fixtures/fable-stdin.json > "$TESTTMP/stdin-probe.json"
+  fable_render "$CACHE" "file:///nonexistent" "$NOCREDS" "$TESTTMP/stdin-probe.json"
+  check_eq "fable: stdin injection $label exit code" "0" "$FB_RC"
+  [ ! -e tests/.pwned ]
+  check_ok "fable: stdin injection $label tests/.pwned not created" $?
+  check_eq "fable: stdin injection $label stderr bytes" "0" "$FB_ERRBYTES"
+done
+rm -f tests/.pwned
+
+# stdin arrays on model_scoped itself and its three fields (CR-02 shape):
+# the arrays[]?/objects and strings/uint guards collapse each to one empty
+# word, so eval never sees extra words; an emptied pct skips the stdin
+# branch and, with no credentials, the segment hides. An emptied resets_at
+# keeps the valid pct (D-54): number without parens, still no injection.
+for spec in 'model_scoped:.rate_limits.model_scoped' \
+            'display_name:.rate_limits.model_scoped[0].display_name' \
+            'utilization:.rate_limits.model_scoped[0].utilization' \
+            'resets_at:.rate_limits.model_scoped[0].resets_at'; do
+  label=${spec%%:*}; path=${spec#*:}
+  rm -f tests/.pwned "$CACHE"
+  jq "$path = [\"\",\"touch\",\"tests/.pwned\"]" tests/fixtures/fable-stdin.json > "$TESTTMP/stdin-probe.json"
+  fable_render "$CACHE" "file:///nonexistent" "$NOCREDS" "$TESTTMP/stdin-probe.json"
+  check_eq "fable: stdin array $label exit code" "0" "$FB_RC"
+  [ ! -e tests/.pwned ]
+  check_ok "fable: stdin array $label tests/.pwned not created" $?
+  if [ "$label" = resets_at ]; then
+    check_eq "fable: stdin array $label -> no parens (pct kept)" "$L2_BASE · Fable 33%/1w" "$FB_L2"
+  else
+    check_eq "fable: stdin array $label hidden" "$L2_BASE" "$FB_L2"
+  fi
+done
+rm -f tests/.pwned
+
+# hostile cache file (FAB-04 fallback edge, D-57): garbage, then a JSON
+# whose three fields carry a subscript-injection string, an array and an
+# out-of-range exponent — read_cache's uint guard must empty all three so
+# $(( NOW - C_AT )) never sees the payload (M8 in the plan's bite table).
+printf 'garbage\n' > "$CACHE"
+fable_render "$CACHE" "file:///nonexistent" "$CREDS" tests/fixtures/full.json
+check_eq "fable: hostile cache garbage hidden" "$L2_BASE" "$FB_L2"
+check_eq "fable: hostile cache garbage stderr bytes" "0" "$FB_ERRBYTES"
+check_eq "fable: hostile cache garbage exit code" "0" "$FB_RC"
+rm -f tests/.pwned
+printf '%s\n' '{"fetched_at":"x[$(touch tests/.pwned)]","pct":["","touch","tests/.pwned"],"resets_at":1e100}' > "$CACHE"
+fable_render "$CACHE" "file:///nonexistent" "$CREDS" tests/fixtures/full.json
+check_eq "fable: hostile cache injection exit code" "0" "$FB_RC"
+[ ! -e tests/.pwned ]
+check_ok "fable: hostile cache injection tests/.pwned not created" $?
+check_eq "fable: hostile cache injection stderr bytes" "0" "$FB_ERRBYTES"
+check_eq "fable: hostile cache injection hidden" "$L2_BASE" "$FB_L2"
+rm -f tests/.pwned
+
+# hostile endpoint body (D-59, FAB-04): non-JSON, a non-array limits, and
+# injection / array payloads in the Fable bucket's percent and display_name
+# — fetch_usage's guarded jq must parse each to empties (hidden) and never
+# let a payload reach eval or arithmetic. Bodies are generated under
+# $TESTTMP with single-quoted jq filters so every payload is a literal here.
+printf 'not json at all\n' > "$TESTTMP/body-nonjson.json"
+jq '.limits = "x"' tests/fixtures/usage/fable.json > "$TESTTMP/body-limstr.json"
+jq '(.limits[] | select(.kind=="weekly_scoped") | .percent) = "x[$(touch tests/.pwned)]"' tests/fixtures/usage/fable.json > "$TESTTMP/body-pinj.json"
+jq '(.limits[] | select(.kind=="weekly_scoped") | .percent) = ["","touch","tests/.pwned"]' tests/fixtures/usage/fable.json > "$TESTTMP/body-parr.json"
+jq '(.limits[] | select(.kind=="weekly_scoped") | .scope.model.display_name) = ["","touch","tests/.pwned"]' tests/fixtures/usage/fable.json > "$TESTTMP/body-dnarr.json"
+for spec in 'non-json|body-nonjson.json' \
+            'limits string|body-limstr.json' \
+            'percent injection|body-pinj.json' \
+            'percent array|body-parr.json' \
+            'display_name array|body-dnarr.json'; do
+  label=${spec%%|*}; file=${spec#*|}
+  rm -f tests/.pwned "$CACHE"
+  fable_render "$CACHE" "file://$TESTTMP/$file" "$CREDS" tests/fixtures/full.json
+  check_eq "fable: hostile body $label exit code" "0" "$FB_RC"
+  [ ! -e tests/.pwned ]
+  check_ok "fable: hostile body $label tests/.pwned not created" $?
+  check_eq "fable: hostile body $label stderr bytes" "0" "$FB_ERRBYTES"
+  check_eq "fable: hostile body $label hidden" "$L2_BASE" "$FB_L2"
+done
+rm -f tests/.pwned
 
 rm -f "$CACHE"
 
