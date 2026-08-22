@@ -217,6 +217,31 @@ for spec in 'model display_name:.model.display_name' \
 done
 rm -f tests/.pwned
 
+# 7.5 Non-integer numeric payloads (WR-03). Well-typed JSON numbers that are
+# not bash-parseable integers (float / exponent) must never leak arithmetic
+# or [ errors to stderr: the jq canonicalizer floors them and drops anything
+# out of range, so the render degrades per hide-over-placeholder (an
+# out-of-range epoch hides the countdown; a float token count is floored)
+# while a 23.5-style percentage still renders 23% (CLAUDE.md float contract,
+# pinned here so the canonicalizer can never break it). --argjson carries
+# the literal to the script verbatim (section-5 discipline); stderr is read
+# back through $ERRTMP (section-7.3 discipline).
+for spec in 'five_hour resets_at float|.rate_limits.five_hour.resets_at|1755800000.5|10%/100k/1M · 50%/5h (now) · 15%/1w (now)' \
+            'five_hour resets_at exponent|.rate_limits.five_hour.resets_at|1e100|10%/100k/1M · 50%/5h · 15%/1w (now)' \
+            'context_window used_percentage exponent|.context_window.used_percentage|1e2|100%/100k/1M · 50%/5h (now) · 15%/1w (now)' \
+            'context_window total_input_tokens float|.context_window.total_input_tokens|100000.7|10%/100k/1M · 50%/5h (now) · 15%/1w (now)' \
+            'five_hour used_percentage float|.rate_limits.five_hour.used_percentage|23.5|10%/100k/1M · 23%/5h (now) · 15%/1w (now)'; do
+  label=${spec%%|*}; rest=${spec#*|}
+  path=${rest%%|*};  rest=${rest#*|}
+  value=${rest%%|*}; want=${rest#*|}
+  out=$(jq --argjson v "$value" "$path = \$v" tests/fixtures/full.json \
+          | /bin/bash "$SL" 2>"$ERRTMP")
+  errbytes=$(wc -c < "$ERRTMP" | tr -d '[:space:]')
+  check_eq "non-integer probe: $label stderr bytes" "0" "$errbytes"
+  check_eq "non-integer probe: $label line 2" "$want" \
+    "$(printf '%s\n' "$out" | strip_ansi | sed -n 2p)"
+done
+
 # --- 8. Git-state matrix (GIT-01..06, D-17..D-27) ----------------------------
 # Real temp repos under $TESTTMP, built hermetically with a config-isolated
 # git wrapper so host config (gpgsign, hooks, init.defaultBranch) cannot
