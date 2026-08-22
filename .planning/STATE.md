@@ -4,10 +4,10 @@ current_phase: 04
 current_phase_name: Fable Weekly f() Segment
 status: executing
 stopped_at: Completed 04-01-PLAN.md
-last_updated: "2026-08-22T21:38:30.534Z"
+last_updated: "2026-08-22T21:38:52.938Z"
 last_activity: 2026-08-22
 last_activity_desc: Phase 04 execution started
-state_head: 4df614a4cc9c0118852d9cb22368fc4a2a1f7728
+state_head: ded30e97fcbf0c712232a6eae7042da177d2e4e6
 progress:
   total_phases: 4
   completed_phases: 3
@@ -84,6 +84,9 @@ Recent decisions affecting current work:
 - [Phase 03]: `sbx kit add` is refused by sbx v0.39.0 for kits declaring `setup.startup` — README documents `sbx rm` + recreate; `tests/sandbox.sh` re-probes on every run (D-37a) so the sentence can flip on a future sbx
 - [Phase 03]: Cross-environment evidence = `tests/render-fixtures.sh` raw renders under gitignored `tests/out/<env>/` + POSIX `diff -r` (7/7 byte-identical); `tests/sandbox.sh` 11 checks / 0 failures; UAT 3/3 passed; 15/15 threats closed (03-SECURITY.md)
 - [Phase 04 prep]: OAuth `GET /api/oauth/usage` endpoint, window key naming, `utilization` scale, and sandbox credential presence are the open research items for `f()`
+- [Phase 04]: Fable value is a separate last line-2 peer segment "Fable NN%/1w (countdown)" (D-51), not f(pct) inside the weekly segment; docs reconciled in 04-04
+- [Phase 04]: Fable source order stdin model_scoped (D-48, empty today) -> 300 s TTL cache -> OAuth usage endpoint via curl -K - with the read-only token (credentials file -> Keychain, expiresAt pre-check) -> 3600 s grace -> hidden
+- [Phase 04]: Shared per-user cache ~/.claude/statusline-usage-cache.json, 0600 via mktemp+mv -f, negative results cached; STATUSLINE_NO_FABLE kill switch exported in tests/run.sh and tests/render-fixtures.sh keeps the harness hermetic
 
 ### Pending Todos
 
