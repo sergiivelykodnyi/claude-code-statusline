@@ -3,16 +3,16 @@ gsd_state_version: 1.0
 current_phase: 03
 current_phase_name: Install & Dual-Environment Validation
 status: executing
-stopped_at: Completed 03-01-PLAN.md
-last_updated: "2026-08-22T12:03:05.435Z"
+stopped_at: Completed 03-02-PLAN.md
+last_updated: "2026-08-22T12:10:10.765Z"
 last_activity: 2026-08-22
 last_activity_desc: Phase 03 execution started
-state_head: cf9bc74d0a4a3c769da720bf230120e376040f3b
+state_head: 5cccf711b20292bdeb62991a642a4c8a29891808
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 9
-  completed_plans: 7
+  completed_plans: 8
   percent: 50
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-08-22)
 ## Current Position
 
 Phase: 03 (Install & Dual-Environment Validation) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-08-22 — Phase 03 execution started
 
@@ -66,6 +66,7 @@ Progress: [████████████████████] 6/6 pla
 | Phase 02 P03 | 3 min | 2 tasks | 2 files |
 | Phase 02 P04 | 4 min | 3 tasks | 2 files |
 | Phase 03 P01 | 5 min | 2 tasks | 5 files |
+| Phase 03 P02 | 3 min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -85,6 +86,8 @@ Recent decisions affecting current work:
 - [Phase 02]: UAT passed 2/2 (git color legibility both themes; prohibition sign-off) — security verified 14/14 closed, threats_open: 0 (02-SECURITY.md)
 - [Phase 03]: Phase 3 kit lives at kit/ (sbx mixin, schemaVersion 2); canonical statusline.sh relocated there by pure git mv (100755, byte-identical, no root shim); startup reconcile = themeId wait + jq merge of only .statusLine + atomic mv + chmod 0755 + non-recursive chown
 - [Phase 03]: Cross-environment evidence via tests/render-fixtures.sh raw renders under gitignored tests/out/<env>/, compared with POSIX diff -r; harness exec-bit check proven to bite (126 checks)
+- [Phase 03]: README (97 lines, D-40 shape) documents host ln -sf into kit/files/home/.claude/statusline.sh + rm -f && cp variant with overwrite warning, the D-34 statusLine snippet with padding 0 / refreshInterval 60, a full.json verify command proven against the shipped script, and both sbx kit routes (local --kit / sbx kit add, git+https to the real repo name claude-code-statusline); ~/.claude untouched (D-46)
+- [Phase 03]: ARCHITECTURE.md and PROJECT.md reconciled: kit/ is the canonical script location, sandboxes do not import host ~/.claude, the sbx mixin kit is the sandbox install route
 
 ### Pending Todos
 
@@ -109,6 +112,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-08-22T12:03:05.357Z
-Stopped at: Completed 03-01-PLAN.md
+Last session: 2026-08-22T12:10:10.691Z
+Stopped at: Completed 03-02-PLAN.md
 Resume file: None

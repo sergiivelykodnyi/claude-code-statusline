@@ -57,8 +57,8 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Documentation
 
-- [ ] **DOCS-01**: README briefly describes what the status line shows (with the example layout) and the `ln -s` command that symlinks `statusline.sh` into `~/.claude`
-- [ ] **DOCS-02**: README includes the `settings.json` `statusLine` snippet (with `refreshInterval` so countdowns tick while idle)
+- [x] **DOCS-01**: README briefly describes what the status line shows (with the example layout) and the `ln -s` command that symlinks `statusline.sh` into `~/.claude`
+- [x] **DOCS-02**: README includes the `settings.json` `statusLine` snippet (with `refreshInterval` so countdowns tick while idle)
 
 ## v2 Requirements
 
@@ -112,8 +112,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PORT-02 | Phase 2 | Complete |
 | PORT-01 | Phase 3 | Pending |
 | PORT-04 | Phase 3 | Pending |
-| DOCS-01 | Phase 3 | Pending |
-| DOCS-02 | Phase 3 | Pending |
+| DOCS-01 | Phase 3 | Complete |
+| DOCS-02 | Phase 3 | Complete |
 | FAB-01 | Phase 4 | Pending |
 | FAB-02 | Phase 4 | Pending |
 | FAB-03 | Phase 4 | Pending |

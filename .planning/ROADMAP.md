@@ -87,7 +87,7 @@ Plans:
   3. Reset countdowns keep ticking while the session is idle, via the `refreshInterval` in the documented settings snippet
   4. README shows what the status line displays (with the example output) plus the symlink install command and the `statusLine` settings snippet
 
-**Plans:** 1/3 plans executed
+**Plans:** 2/3 plans executed
 
 Plans:
 **Wave 1**
@@ -96,7 +96,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 03-02-PLAN.md — README: what it shows, legend, host symlink/copy install + settings snippet (refreshInterval 60) + verify command, Docker Sandboxes kit install (local + git+https), requirements; planning-doc reconciliation
+- [x] 03-02-PLAN.md — README: what it shows, legend, host symlink/copy install + settings snippet (refreshInterval 60) + verify command, Docker Sandboxes kit install (local + git+https), requirements; planning-doc reconciliation
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -127,5 +127,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 |-------|----------------|--------|-----------|
 | 1. Core Status Line from Stdin | 2/2 | Complete    | 2026-08-21 |
 | 2. Git Segment | 4/4 | Complete    | 2026-08-22 |
-| 3. Install & Dual-Environment Validation | 1/3 | In Progress|  |
+| 3. Install & Dual-Environment Validation | 2/3 | In Progress|  |
 | 4. Fable Weekly f() Segment | 0/? | Not started | - |
