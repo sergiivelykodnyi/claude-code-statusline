@@ -4,8 +4,11 @@
 # kit-delivered script and the merged statusLine settings inside it, runs the
 # full harness and the raw render dumper in the sandbox, diffs the sandbox
 # renders byte-for-byte against the host renders (PORT-01, PORT-04), probes
-# the stop/start (D-32) and `sbx kit add` (D-37a) behaviours, and writes every
-# PASS/FAIL/INFO line plus the summary to tests/out/sandbox/EVIDENCE.txt.
+# the stop/start (D-32) and `sbx kit add` (D-37a) behaviours, probes the
+# Fable weekly segment in the sandbox (credentials-file presence + a live
+# render through the sandbox's own token and proxy egress — FAB-02, D-63),
+# and writes every PASS/FAIL/INFO line plus the summary to
+# tests/out/sandbox/EVIDENCE.txt.
 #
 # Runs on the macOS HOST only: bash 3.2-safe, BSD/GNU-neutral. Needs `sbx`
 # (Docker Sandboxes CLI, v0.39.0) and a reachable sandboxd (Docker Desktop
@@ -70,6 +73,11 @@ SBX_SETTINGS=/home/agent/.claude/settings.json
 
 CHECKS=0
 FAILS=0
+ESC=$(printf '\033')
+
+# ANSI-strip helper — BSD/GNU-portable sed on a real escape byte (same as
+# tests/run.sh; used by the §5.13 Fable render probe).
+strip_ansi() { sed "s/${ESC}\[[0-9;]*m//g"; }
 
 # emit LINE... — every PASS/FAIL/INFO line and the summary go to stdout AND
 # are appended to the evidence file (created in stage 4, before any check).
@@ -256,6 +264,34 @@ else
 fi
 sbx rm -f "$ADD_NAME" > /dev/null 2>&1 || true
 emit "INFO probes (not counted): kit-add=$KITADD (D-37a)"
+
+# 5.13 Fable weekly in the sandbox (FAB-02, D-63): the primary sandbox is
+# still running here. The probe renders tests/fixtures/full.json through the
+# kit-delivered script with the kill switch unset and NO URL / credentials /
+# cache override, so the script discovers the sandbox's own
+# /home/agent/.claude/.credentials.json and reaches the endpoint through the
+# sandbox's HTTPS_PROXY egress exactly as a live session would. The
+# credentials file is probed for PRESENCE only (test -f) — never read,
+# printed, copied or forwarded; the evidence carries percentages and ls -l
+# modes only (T-04-02). When the file is absent a hidden segment is the
+# correct outcome (D-63). Nothing here touches the host ~/.claude (D-46).
+if sx "$NAME" test -f /home/agent/.claude/.credentials.json; then CREDS=present; else CREDS=absent; fi
+emit "INFO credentials file: $CREDS (presence only — never read)"
+t0=$(date +%s)
+FAB_RAW=$(sx "$NAME" /bin/bash -c "unset STATUSLINE_NO_FABLE; /bin/bash $SBX_SL < $PWD/tests/fixtures/full.json" 2>/dev/null)
+t1=$(date +%s)
+FAB_L2=$(printf '%s\n' "$FAB_RAW" | strip_ansi | sed -n 2p)
+emit "INFO sandbox Fable render: $(( t1 - t0 ))s  line 2: $FAB_L2"
+if [ "$CREDS" = present ]; then
+  case "$FAB_L2" in *"· Fable "*"%/1w"*) r=0 ;; *) r=1 ;; esac
+  check_ok "Fable segment renders in sandbox (FAB-02, D-63)" $r
+else
+  case "$FAB_L2" in *Fable*) r=1 ;; *) r=0 ;; esac
+  check_ok "Fable hidden in sandbox without credentials (D-63)" $r
+  emit "INFO credentials absent — a hidden Fable segment is the correct outcome (D-63)"
+fi
+# Cache evidence, mode only (expected -rw------- owned by agent when present).
+emit "INFO sandbox cache: $(sx "$NAME" ls -l /home/agent/.claude/statusline-usage-cache.json 2>&1)"
 
 # --- 6. Primary sandbox disposition + summary (summary is the LAST line) ----
 

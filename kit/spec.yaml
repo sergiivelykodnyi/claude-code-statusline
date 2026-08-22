@@ -16,10 +16,10 @@ requires:
   agent: claude            # settings.json is only read by Claude Code; inert on other agents
 setup:
   install:
-    # D-33: guard the script's dependencies once at creation. Both already ship
-    # in the claude-code base image, so this is normally a no-op.
-    - command: command -v jq >/dev/null 2>&1 && command -v git >/dev/null 2>&1 || (apt-get update && apt-get install -y --no-install-recommends jq git)
-      description: Guard the script's dependencies (jq, git) — no-op on the claude-code base image (D-33)
+    # D-33: guard the script's dependencies once at creation. All three already
+    # ship in the claude-code base image, so this is normally a no-op.
+    - command: command -v jq >/dev/null 2>&1 && command -v git >/dev/null 2>&1 && command -v curl >/dev/null 2>&1 || (apt-get update && apt-get install -y --no-install-recommends jq git curl)
+      description: Guard the script's dependencies (jq, git, curl) — no-op on the claude-code base image (D-33)
   startup:
     # D-32: idempotent merge of ONLY the statusLine key, every start, as root.
     # POSIX sh on Linux — GNU tools are acceptable here and here only.
