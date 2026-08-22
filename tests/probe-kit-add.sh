@@ -163,7 +163,7 @@ if [ "$BUILD_ONLY" -eq 0 ] && [ "$KEEP" -eq 0 ]; then
   trap 'sbx rm -f "$ADD_NAME" > /dev/null 2>&1 || true; sbx rm -f "$INST_NAME" > /dev/null 2>&1 || true' EXIT
 fi
 
-SBX_VER=$(sbx version 2>/dev/null | head -n 1)
+SBX_VER=$(sbx version 2>/dev/null | head -n 1); SBX_VER=${SBX_VER#sbx version: }   # e.g. "v0.39.0 <sha>"
 emit "INFO probe-kit-add.sh start: $(date -u +%Y-%m-%dT%H:%M:%SZ) repo=$PWD scratch=$SCRATCH sbx=${SBX_VER:-<unknown>}"
 
 # --- 5. Scratch install-only kit: build + validate --------------------------
@@ -233,7 +233,7 @@ fi
 QA=FAIL; QA_REASON=not-run
 sbx rm -f "$ADD_NAME" > /dev/null 2>&1 || true
 CREATE_OUT=$(sbx create --name "$ADD_NAME" claude "$PWD" 2>&1); rc=$?
-check_ok "Q-a: sandbox created WITHOUT kit: $ADD_NAME" $rc
+check_ok "Q-a create: sandbox created WITHOUT kit: $ADD_NAME" $rc
 if [ "$rc" -ne 0 ]; then
   emit "INFO Q-a: sbx create output: $CREATE_OUT"
 else
