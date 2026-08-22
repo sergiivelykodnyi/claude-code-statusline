@@ -355,11 +355,13 @@ get_fable_weekly() {
 
 main() {
   # Ingestion: one jq pass, @sh-quoted, // "" on every field, plus a type
-  # guard on every field. The 3 string fields carry a string type guard: a
+  # guard on every field (12 @sh-ingested fields). The 4 string fields
+  # (MODEL, EFFORT, DIR, FAB_SI_RST) carry a string type guard: a
   # non-string (array, object, number, bool) becomes the empty string, so a
   # JSON array can never fan out into multiple eval words (@sh quotes each
   # array element as its own word, which eval would run as a command). The
-  # 7 numeric fields are canonicalized to bounded non-negative integers: a
+  # 8 numeric fields (CTX_*, P5_*, P7_*, FAB_SI_PCT) are canonicalized to
+  # bounded non-negative integers: a
   # non-number (string, object, ...) becomes the empty string and is skipped
   # by the hide-on-empty gates below, so untrusted stdin can never reach the
   # $(( )) arithmetic sinks (bash 3.2 command-substitutes an array subscript
@@ -368,11 +370,19 @@ main() {
   # integer sinks never see an unparseable or overflowing token (23.5 -> 23,
   # 1e2 -> 100, 1e100 -> empty). Every assignment eval sees is therefore
   # exactly one quoted word or empty. Do not branch on jq's exit code (empty
-  # stdin exits 0 with no output).
+  # stdin exits 0 with no output). The FAB_SI_* pair is the stdin-first probe
+  # (D-48, D-50): the first rate_limits.model_scoped[] entry whose
+  # display_name starts with "fable" (case-insensitive); utilization is
+  # already 0-100 (no scaling), resets_at is an ISO string converted by
+  # iso_to_epoch in get_fable_weekly. The binding sits before the @sh string
+  # because @sh applies to the whole program output; absent today -> empty.
   local input vars sep model_seg dir_seg git_seg body NOW LINE1 LINE2 FAB_PCT FAB_RST
   input=$(cat)
   vars=$(printf '%s' "$input" | jq -r '
     def uint: (numbers | floor | select(. >= 0 and . < 1e15)) // "";
+    ( [ .rate_limits.model_scoped? // [] | arrays[]? | objects
+        | select((.display_name? // "" | strings // "") | ascii_downcase | startswith("fable")) ]
+      | first // {} ) as $ms |
     @sh "
     MODEL=\(.model.display_name // "" | strings // "")
     EFFORT=\(.effort.level // "" | strings // "")
@@ -384,6 +394,8 @@ main() {
     P5_RST=\(.rate_limits.five_hour.resets_at // "" | uint)
     P7_PCT=\(.rate_limits.seven_day.used_percentage // "" | uint)
     P7_RST=\(.rate_limits.seven_day.resets_at // "" | uint)
+    FAB_SI_PCT=\($ms.utilization // "" | uint)
+    FAB_SI_RST=\($ms.resets_at // "" | strings // "")
   " ' 2>/dev/null)
   eval "$vars"
 

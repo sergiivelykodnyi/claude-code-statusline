@@ -21,11 +21,13 @@
 # Exit status: 0 on success; 1 on any byte difference or a REQUIRE_INSTALLED
 # miss (helpers may exit non-zero — only statusline.sh itself is never-fail).
 #
-# Determinism: all 7 fixtures render time-independently — resets_at 0 renders
+# Determinism: all 8 fixtures render time-independently — resets_at 0 renders
 # "(now)" forever, and empty/malformed fall back to the repo directory
 # basename, identical in the sandbox because the workspace is mounted at the
-# same absolute path. Raw bytes are compared on purpose: PORT-01 "identical
-# output" includes the color codes, so nothing is stripped here.
+# same absolute path. fable-stdin.json (rate_limits.model_scoped) renders
+# without the Fable segment because this dumper exports the kill switch.
+# Raw bytes are compared on purpose: PORT-01 "identical output" includes
+# the color codes, so nothing is stripped here.
 # The Fable path is disabled by the exported kill switch (D-64), so the dumps
 # never depend on network reachability or credentials in either environment.
 
