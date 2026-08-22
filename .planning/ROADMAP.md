@@ -87,7 +87,20 @@ Plans:
   3. Reset countdowns keep ticking while the session is idle, via the `refreshInterval` in the documented settings snippet
   4. README shows what the status line displays (with the example output) plus the symlink install command and the `statusLine` settings snippet
 
-**Plans**: TBD
+**Plans:** 3 plans
+
+Plans:
+**Wave 1**
+
+- [ ] 03-01-PLAN.md — Tracer: move statusline.sh into the sbx mixin kit (kit/spec.yaml with the idempotent statusLine merge), validate offline, re-point the harness (+exec-bit check), add tests/render-fixtures.sh for byte-for-byte render diffs
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 03-02-PLAN.md — README: what it shows, legend, host symlink/copy install + settings snippet (refreshInterval 60) + verify command, Docker Sandboxes kit install (local + git+https), requirements; planning-doc reconciliation
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 03-03-PLAN.md — Live sandbox evidence: tests/sandbox.sh (create-with-kit, exec checks, harness + render dump in sandbox, host/sandbox byte diff, restart + kit-add probes), README reconciled with observations, live check hand-off
 
 ### Phase 4: Fable Weekly f() Segment
 
