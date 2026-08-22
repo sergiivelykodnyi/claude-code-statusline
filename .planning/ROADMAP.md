@@ -117,7 +117,7 @@ Plans:
   4. Repeated renders within the cache TTL make no network call, and a cold fetch never delays the render beyond its short curl timeout
   5. Layout correction (D-51): the brief's in-segment notation is superseded by the separate `Fable pct/1w (countdown)` segment rendered last on line 2 — REQUIREMENTS.md, PROJECT.md and README reconciled
 
-**Plans**: 3/4 plans executed
+**Plans**: 4/4 plans executed
 
 Plans:
 **Wave 1**
@@ -130,7 +130,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 04-03-PLAN.md — Sandbox probe in tests/sandbox.sh (credentials presence + live in-sandbox Fable render), curl in the kit guard, Docker Desktop human-action gate, live sandbox evidence run, end-of-phase live-check hand-off (autonomous: false)
+- [x] 04-03-PLAN.md — Sandbox probe in tests/sandbox.sh (credentials presence + live in-sandbox Fable render), curl in the kit guard, Docker Desktop human-action gate, live sandbox evidence run, end-of-phase live-check hand-off (autonomous: false)
 - [x] 04-04-PLAN.md — Docs: README Fable note + example/legend (D-66), D-52 reconciliation of REQUIREMENTS/PROJECT/ROADMAP with the D-51 separate-segment layout (parallel with 04-03, disjoint files)
 
 ## Progress
@@ -143,4 +143,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | 1. Core Status Line from Stdin | 2/2 | Complete    | 2026-08-21 |
 | 2. Git Segment | 4/4 | Complete    | 2026-08-22 |
 | 3. Install & Dual-Environment Validation | 3/3 | Complete    | 2026-08-22 |
-| 4. Fable Weekly f() Segment | 3/4 | In Progress|  |
+| 4. Fable Weekly f() Segment | 4/4 | In Progress|  |

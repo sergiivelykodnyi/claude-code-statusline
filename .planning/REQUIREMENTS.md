@@ -36,10 +36,10 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Fable Weekly (Line 2)
 
-- [ ] **FAB-01**: Status line shows the Fable 5-specific weekly usage as a separate `Fable pct/1w (countdown)` segment rendered last on line 2, with its own reset countdown (e.g. `15%/1w (3d:5h:57m) · Fable 74%/1w (2d:4h:30m)`) — layout correction (Phase 4): supersedes the brief's in-segment notation
-- [ ] **FAB-02**: Fable weekly data is fetched from the OAuth usage endpoint with the Claude Code OAuth token, discovered from macOS Keychain on the host and `~/.claude/.credentials.json` in Docker Sandboxes
+- [x] **FAB-01**: Status line shows the Fable 5-specific weekly usage as a separate `Fable pct/1w (countdown)` segment rendered last on line 2, with its own reset countdown (e.g. `15%/1w (3d:5h:57m) · Fable 74%/1w (2d:4h:30m)`) — layout correction (Phase 4): supersedes the brief's in-segment notation
+- [x] **FAB-02**: Fable weekly data is fetched from the OAuth usage endpoint with the Claude Code OAuth token, discovered from macOS Keychain on the host and `~/.claude/.credentials.json` in Docker Sandboxes
 - [x] **FAB-03**: The Fable fetch is cached with a TTL and uses a short curl timeout so it never blocks rendering
-- [ ] **FAB-04**: On any failure (no credentials, endpoint change, timeout, offline), the Fable segment is hidden and the rest of the line renders normally
+- [x] **FAB-04**: On any failure (no credentials, endpoint change, timeout, offline), the Fable segment is hidden and the rest of the line renders normally
 
 ### Presentation
 
@@ -114,10 +114,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PORT-04 | Phase 3 | Complete |
 | DOCS-01 | Phase 3 | Complete |
 | DOCS-02 | Phase 3 | Complete |
-| FAB-01 | Phase 4 | Pending |
-| FAB-02 | Phase 4 | Pending |
+| FAB-01 | Phase 4 | Complete |
+| FAB-02 | Phase 4 | Complete |
 | FAB-03 | Phase 4 | Complete |
-| FAB-04 | Phase 4 | Pending |
+| FAB-04 | Phase 4 | Complete |
 
 **Coverage:**
 

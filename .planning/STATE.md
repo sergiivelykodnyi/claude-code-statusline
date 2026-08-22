@@ -3,16 +3,16 @@ gsd_state_version: 1.0
 current_phase: 04
 current_phase_name: Fable Weekly f() Segment
 status: executing
-stopped_at: Completed 04-04-PLAN.md
-last_updated: "2026-08-22T23:24:56.315Z"
+stopped_at: Completed 04-03-PLAN.md
+last_updated: "2026-08-22T23:58:33.630Z"
 last_activity: 2026-08-23
 last_activity_desc: Phase 04 execution started
-state_head: 99b07e5d5ab2c1c6be2d47f3866495b9ab459b00
+state_head: 87609aee5f971128173f78a1297f99c909bfd26a
 progress:
   total_phases: 4
   completed_phases: 3
   total_plans: 13
-  completed_plans: 12
+  completed_plans: 13
   percent: 75
 ---
 
@@ -28,8 +28,8 @@ See: .planning/PROJECT.md (updated 2026-08-22)
 ## Current Position
 
 Phase: 04 (Fable Weekly f() Segment) — EXECUTING
-Plan: 1 of 4
-Status: Executing Phase 04
+Plan: 2 of 4
+Status: Ready to execute
 Last activity: 2026-08-23 — Phase 04 execution started
 
 Progress: [████████████████████] 9/9 plans ([████████░░] 75%) — Phase 3 of 4 complete (75%)
@@ -72,6 +72,7 @@ Progress: [████████████████████] 9/9 pla
 | Phase 04 P01 | 16 min | 2 tasks | 5 files |
 | Phase 04 P02 | 8 min | 2 tasks | 2 files |
 | Phase 04 P04 | 7 min | 2 tasks | 4 files |
+| Phase 04 P03 | 1h 20m | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -93,6 +94,8 @@ Recent decisions affecting current work:
 - [Phase 04]: Exported kill switch is load-bearing for harness hermeticity: M1 bite run showed the fixture loop going live (Keychain + endpoint) without it; nothing written under ~/.claude
 - [Phase 04]: project-brief.md left untouched as the historical brief; the Phase 4 layout correction is recorded in PROJECT.md (blockquote note) and ROADMAP criterion 5 (04-04)
 - [Phase 04]: README names only the two read-only token sources and the kill switch; numbers copied from the script header Env inputs block (04-04)
+- [Phase 04]: Sandbox credentials branch observed PRESENT (proxy-scoped token via the global sbx anthropic secret) — the Fable segment renders live inside the kit sandbox with no kit change; README's Docker sentence already covers this branch
+- [Phase 04]: Host ~/.claude/statusline.sh is a stale 9800-byte regular-file copy of the pre-Phase-4 script, left untouched per D-46 — the host half of the live check requires the user to re-run the README ln -sf line first
 
 ### Pending Todos
 
@@ -123,6 +126,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-08-22T22:08:12.930Z
-Stopped at: Completed 04-04-PLAN.md
+Last session: 2026-08-22T23:58:22.990Z
+Stopped at: Completed 04-03-PLAN.md
 Resume file: None
