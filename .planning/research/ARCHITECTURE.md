@@ -67,17 +67,19 @@ A robust `statusline.sh` is a **pipeline in a single file**: ingest once → col
 Single file. Order sections top-to-bottom so each layer only calls things defined above it:
 
 ```
-statusline.sh
-├── 1. shebang + strict-ish header    # #!/usr/bin/env bash; guard: exit 0 silently on any fatal error
-├── 2. ANSI color constants
-├── 3. pure helpers                   # shorten_num, fmt_duration, pct_color
-├── 4. portability shims              # file_mtime
-├── 5. ingestion                      # input=$(cat); single jq → vars
-├── 6. collectors                     # collect_git (opt. cached), get_model_weekly_pct
-├── 7. segment renderers              # seg_model_effort … seg_1w
-├── 8. assembler + output             # build LINE1/LINE2, printf
-README.md                             # what it shows + ln -s install command
-tests/ (optional)                     # mock-JSON fixtures piped in: echo '{...}' | ./statusline.sh
+kit/
+├── spec.yaml                         # kit/spec.yaml — sbx mixin kit manifest: delivers the script + merges the statusLine key in Docker Sandboxes
+└── files/home/.claude/statusline.sh  # the canonical script — host symlink target AND kit static file (one copy, no shim at the root)
+    ├── 1. shebang + strict-ish header    # #!/bin/bash; guard: exit 0 silently on any fatal error
+    ├── 2. ANSI color constants
+    ├── 3. pure helpers                   # shorten_num, fmt_duration, pct_color
+    ├── 4. portability shims              # file_mtime
+    ├── 5. ingestion                      # input=$(cat); single jq → vars
+    ├── 6. collectors                     # collect_git (opt. cached), get_model_weekly_pct
+    ├── 7. segment renderers              # seg_model_effort … seg_1w
+    └── 8. assembler + output             # build LINE1/LINE2, printf
+README.md                             # what it shows + ln -sf host install + settings snippet + sandbox kit install
+tests/                                # run.sh (harness), render-fixtures.sh, sandbox.sh, fixtures/ (mock JSON piped in)
 ```
 
 ### Structure Rationale
@@ -248,7 +250,7 @@ Scaling here is repo size and invocation frequency, not users:
 | Claude Code host | stdin JSON in, stdout lines out; configured via `statusLine.command` in `~/.claude/settings.json` | Runs on events, 300ms debounce, cancellation; `COLUMNS`/`LINES` env give terminal width (v2.1.153+); test with `echo '{…}' \| ./statusline.sh` |
 | Local git | Read-only local commands, `--no-optional-locks`, `-C "$DIR"` | Never `git fetch` — ↓/↑ reflect last-known remote refs |
 | OAuth usage API (f() only) | Isolated adapter + cache file + TTL; hide on failure | Undocumented, reported deprecated; validate in its own phase before building |
-| Filesystem (`~/.claude`) | Repo is source of truth; `ln -s` into `~/.claude/statusline.sh`; sandboxes share `~/.claude` mount | Same file must run on both platforms — no build/install step |
+| Filesystem (`~/.claude`) | Repo is source of truth. Host: `ln -sf` from `~/.claude/statusline.sh` into `kit/files/home/.claude/statusline.sh`. Docker Sandboxes: the `kit/` sbx mixin kit copies the script to `/home/agent/.claude/statusline.sh` and merges the `statusLine` key into `/home/agent/.claude/settings.json` at every start, because sandboxes do not import the host `~/.claude` | Same file runs on both platforms — no build step; the kit is the sandbox install route |
 
 ### Internal Boundaries
 

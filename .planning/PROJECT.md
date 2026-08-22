@@ -69,7 +69,7 @@ Segment definitions:
 - Claude Code invokes the status line command with a JSON payload on stdin (model, workspace, etc.); the script parses it with `jq`.
 - The 5h / weekly rate-limit percentages and reset times are not obviously part of the basic stdin payload — the reliable source (newer stdin fields, local `~/.claude` data files, or an API call) is an open research question.
 - The repo already contains `project-brief.md` and design notes committed as docs.
-- Installation model: this repo is the source of truth; `statusline.sh` is symlinked to `~/.claude/statusline.sh` so both host and sandboxes (which mount/share `~/.claude`) pick it up.
+- Installation model: this repo is the source of truth. On the host, `kit/files/home/.claude/statusline.sh` is symlinked to `~/.claude/statusline.sh`. Docker Sandboxes do not import the host `~/.claude` (user-level config is not imported and symlinks to host paths cannot be followed), so the `kit/` sbx mixin kit installs the same file there and merges the `statusLine` setting at every start.
 
 ## Constraints
 
