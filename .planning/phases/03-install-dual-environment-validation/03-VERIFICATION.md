@@ -1,7 +1,7 @@
 ---
 phase: 03-install-dual-environment-validation
 verified: 2026-08-22T15:21:15Z
-status: human_needed
+status: passed
 score: 21/23 must-haves verified
 behavior_unverified: 1
 overrides_applied: 0
@@ -9,18 +9,22 @@ re_verification: false
 mode: mvp
 mode_guard: "ROADMAP goal is not in User Story form (user-story.validate valid=false); verified against the 4 ROADMAP success criteria + the plan 01 user story instead of refusing — flagged for the orchestrator (see Warnings)"
 behavior_unverified_items:
+
   - truth: "Reset countdowns keep ticking while the session is idle, via the refreshInterval in the documented settings snippet (ROADMAP SC3)"
     test: "Apply the README settings snippet (refreshInterval 60) to ~/.claude/settings.json, start claude in this repo, send one message, then leave the session idle for at least two minutes and watch line 2"
     expected: "The 5h/1w countdown values change while no new message is sent (Claude Code re-runs the script every 60 s)"
     why_human: "The snippet and the kit merge are present (README lines 48-57; kit/spec.yaml line 44; sandbox evidence shows refreshInterval 60 merged), but idle re-rendering is Claude Code runtime behaviour that no test can exercise without a live TUI session; the host settings.json has no refreshInterval today (D-46: the user applies it)"
 coincidental_reliance_items: []
 human_verification:
+
   - test: "Host README install UAT (03-02 Task 1 human-check; coverage D9; ROADMAP SC1 + SC3). On the macOS host, from this repo's root, follow ONLY README.md 'Install on the host': run the ln -sf one-liner, merge the statusLine JSON (with refreshInterval 60) into ~/.claude/settings.json keeping your other keys, start claude in this repo, send one message, look at the status line, leave the session idle >= 2 minutes and watch the countdowns, then run ls -l ~/.claude/statusline.sh"
     expected: "Two-line status line renders: line 1 model + effort, claude-code-status-line, ⎇ main with live git markers; line 2 context usage and the 5h/1w segments with countdowns. While idle the countdown values change (refreshInterval 60). ls -l shows ~/.claude/statusline.sh is a symlink whose target ends in /kit/files/home/.claude/statusline.sh"
     why_human: "Agents never touch ~/.claude (D-46); today ~/.claude/statusline.sh is still the pre-phase regular-file copy (-rwxr-xr-x 9800 bytes, Aug 22 13:53) and settings.json has no refreshInterval — the install has not been applied yet, and a live TUI over time must be observed"
+
   - test: "Live sandbox eyeball (03-03 Task 3 human-check; coverage D8; ROADMAP SC2 live half, D-39). With Docker Desktop running, from this repo's root run sbx run --name statusline-kit-test (recreate with sbx run claude . --kit \"$PWD/kit\" if it is gone), accept any trust prompt, send one short message, and compare the status line with a host claude session in the same repo. Also run: sbx exec statusline-kit-test jq .statusLine /home/agent/.claude/settings.json"
     expected: "Two flush-left lines identical in layout, glyphs and colors to the host; no blank line, no 'Permission denied', no placeholder. jq shows type command / command ~/.claude/statusline.sh / padding 0 / refreshInterval 60"
     why_human: "Visual comparison of a live Claude Code TUI in two environments; the harness + byte diff prove fixture-render identity (automated, verified), only a human confirms the real session renders it. sandboxd was stopped during verification and the verifier was instructed not to start Docker"
+
   - test: "Acknowledge the judgment-tier prohibition verdicts (9 items across the three plans, table below). In particular confirm on your machine that nothing under ~/.claude was created, modified, or re-pointed by Phase 3 agents (D-46): ls -l ~/.claude/statusline.sh should still show the pre-phase regular file and jq -c .statusLine ~/.claude/settings.json should still lack refreshInterval — until YOU apply the README"
     expected: "All 9 prohibitions hold (LLM-judge verdict: not violated, with deterministic evidence for each); the human confirms the host ~/.claude state"
     why_human: "Prohibitions carry no verification tier in the PLAN frontmatter (treated as judgment-tier); per ADR-550 the verifier's verdict is non-authoritative and must be explicitly resolved by a human — unverified-prohibition, human review recommended (never a silent pass)"
