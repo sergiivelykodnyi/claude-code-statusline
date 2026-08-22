@@ -161,18 +161,23 @@ seg_1w() {
 # --- Main -------------------------------------------------------------------
 
 main() {
-  # Ingestion: one jq pass, @sh-quoted, // "" on every field, plus a numeric
-  # type guard on the 7 numeric fields: a non-number (string, object, ...)
-  # becomes the empty string and is skipped by the hide-on-empty gates below,
-  # so untrusted stdin can never reach the $(( )) arithmetic sinks (bash 3.2
-  # command-substitutes an array subscript there). Do not branch on jq's
-  # exit code (empty stdin exits 0 with no output).
+  # Ingestion: one jq pass, @sh-quoted, // "" on every field, plus a type
+  # guard on every field. The 3 string fields carry a string type guard: a
+  # non-string (array, object, number, bool) becomes the empty string, so a
+  # JSON array can never fan out into multiple eval words (@sh quotes each
+  # array element as its own word, which eval would run as a command). The
+  # 7 numeric fields carry a numeric type guard: a non-number (string,
+  # object, ...) becomes the empty string and is skipped by the hide-on-empty
+  # gates below, so untrusted stdin can never reach the $(( )) arithmetic
+  # sinks (bash 3.2 command-substitutes an array subscript there). Every
+  # assignment eval sees is therefore exactly one quoted word or empty. Do
+  # not branch on jq's exit code (empty stdin exits 0 with no output).
   local input vars sep model_seg dir_seg git_seg body NOW LINE1 LINE2
   input=$(cat)
   vars=$(printf '%s' "$input" | jq -r '@sh "
-    MODEL=\(.model.display_name // "")
-    EFFORT=\(.effort.level // "")
-    DIR=\(.workspace.current_dir // "")
+    MODEL=\(.model.display_name // "" | strings // "")
+    EFFORT=\(.effort.level // "" | strings // "")
+    DIR=\(.workspace.current_dir // "" | strings // "")
     CTX_PCT=\(.context_window.used_percentage // "" | numbers // "")
     CTX_TOK=\(.context_window.total_input_tokens // "" | numbers // "")
     CTX_WIN=\(.context_window.context_window_size // "" | numbers // "")
