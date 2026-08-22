@@ -1,5 +1,6 @@
 #!/bin/bash
-# tests/run.sh — never-fail regression harness for statusline.sh.
+# tests/run.sh — never-fail regression harness for the canonical script at
+# kit/files/home/.claude/statusline.sh (D-31: the sbx kit path).
 # One command proves the whole contract: helper tables, all fixture states,
 # exit/stderr silence, threshold colors, palette purity, eval-injection
 # safety, and the git-state matrix against real temp repos. bash 3.2-safe
@@ -9,7 +10,7 @@
 # Prints one PASS/FAIL line per check; exits non-zero if any check failed.
 
 cd "$(dirname "$0")/.." || exit 1
-SL=statusline.sh
+SL=kit/files/home/.claude/statusline.sh
 
 CHECKS=0
 FAILS=0
@@ -48,6 +49,12 @@ trap 'rm -f "$ERRTMP"; rm -rf "$TESTTMP"' EXIT
 
 /bin/bash -n "$SL" 2>/dev/null
 check_ok "syntax: /bin/bash -n $SL" $?
+
+# Exec bit: Claude Code and the ~/.claude symlink/kit copy execute the script
+# directly, so a lost mode (core.fileMode=false checkout, bad copy) blanks
+# the line with "Permission denied" — bites on mode loss (PORT-04).
+[ -x "$SL" ]
+check_ok "exec bit: $SL is executable (PORT-04)" $?
 
 # --- 2. Helper unit tables (source guard keeps main from running) -----------
 
@@ -408,9 +415,16 @@ check_ok "latency: 10 full renders in ${elapsed}s (budget 2s)" $?
 
 if command -v shellcheck > /dev/null 2>&1; then
   printf 'INFO shellcheck advisory (non-failing):\n'
-  shellcheck --shell=bash "$SL" || true
+  shellcheck --shell=bash "$SL" tests/*.sh || true
 else
   printf 'INFO shellcheck not installed — advisory skipped (accepted default)\n'
+fi
+
+# Installed-path advisory (never a check — the harness stays hermetic inside
+# the sandbox, where the kit may or may not have landed the file yet). On the
+# host this shows the symlink/copy the README install step produces (D-46).
+if [ -e "$HOME/.claude/statusline.sh" ]; then
+  printf 'INFO installed: %s\n' "$(ls -l "$HOME/.claude/statusline.sh")"
 fi
 
 # --- Result -----------------------------------------------------------------

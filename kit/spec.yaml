@@ -1,0 +1,51 @@
+# kit/spec.yaml — sbx mixin kit that installs the status line into a Docker
+# Sandbox (D-30). Grammar verified against sbx v0.39.0 (`sbx kit validate kit`):
+# schemaVersion "2", install command = string, startup command = string array.
+#
+# Static file: files/home/.claude/statusline.sh lands at
+# /home/agent/.claude/statusline.sh when the sandbox is created (D-30, D-31).
+# The settings.json wiring is done ONLY by the runtime merge below — never by a
+# static file or setup.files (the docs reserve ~/.claude/settings.json).
+schemaVersion: "2"
+kind: mixin
+name: claude-code-status-line
+version: "1.0.0"
+displayName: Claude Code Status Line
+description: Ships ~/.claude/statusline.sh and sets the statusLine key in ~/.claude/settings.json via a jq merge that preserves every other key.
+requires:
+  agent: claude            # settings.json is only read by Claude Code; inert on other agents
+setup:
+  install:
+    # D-33: guard the script's dependencies once at creation. Both already ship
+    # in the claude-code base image, so this is normally a no-op.
+    - command: command -v jq >/dev/null 2>&1 && command -v git >/dev/null 2>&1 || (apt-get update && apt-get install -y --no-install-recommends jq git)
+      description: Guard the script's dependencies (jq, git) — no-op on the claude-code base image (D-33)
+  startup:
+    # D-32: idempotent merge of ONLY the statusLine key, every start, as root.
+    # POSIX sh on Linux — GNU tools are acceptable here and here only.
+    - command:
+        - sh
+        - -c
+        - |
+          set -e
+          H=/home/agent
+          S=$H/.claude/settings.json
+          mkdir -p "$H/.claude"
+          # Pitfall 2: the platform seeds settings.json late at create time and
+          # overwrites whatever exists — wait for its seed (themeId), then merge
+          # regardless so a slow/absent seed only delays, never blocks.
+          i=0; while [ $i -lt 60 ] && ! grep -q themeId "$S" 2>/dev/null; do sleep 1; i=$((i+1)); done
+          # jq exits 2 on a nonexistent path — pre-seed an empty object.
+          [ -f "$S" ] || printf '{}\n' > "$S"
+          # D-32: atomic tmp + mv; empty/invalid/non-object content still yields
+          # a valid object; every other key is preserved.
+          tmp=$(mktemp "$H/.claude/.settings.XXXXXX")
+          # D-34: exactly the four documented host keys, in this order.
+          jq -n 'try (input) catch {} | (if type=="object" then . else {} end) | .statusLine = {type:"command",command:"~/.claude/statusline.sh",padding:0,refreshInterval:60}' "$S" > "$tmp"
+          mv "$tmp" "$S"
+          # A5 / Pitfall 4: exec-bit insurance for the delivered script.
+          chmod 0755 "$H/.claude/statusline.sh" || true
+          # Hand ownership back to agent (non-recursive — no walk over session data).
+          chown agent:agent "$H/.claude" "$S" "$H/.claude/statusline.sh"
+      user: "0"
+      description: Idempotent statusLine merge after the platform seed; exec-bit and ownership insurance (D-32, D-34)
