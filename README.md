@@ -76,9 +76,10 @@ Docker Sandboxes do not import your host `~/.claude` and cannot follow symlinks 
 Local directory — use the absolute path to this repo's `kit/` (other projects' sandboxes do not mount this repo):
 
 ```sh
-sbx run claude --kit /absolute/path/to/claude-code-status-line/kit            # new sandbox
-sbx kit add <sandbox-name> /absolute/path/to/claude-code-status-line/kit      # existing sandbox
+sbx run claude --kit /absolute/path/to/claude-code-status-line/kit
 ```
+
+Existing sandboxes cannot take the kit afterwards (`--kit` applies only at creation, and sbx 0.39 refuses to add a kit that declares `setup.startup`) — remove and recreate them: `sbx rm <sandbox-name>`, then the `sbx run` command above.
 
 Remote — straight from GitHub:
 

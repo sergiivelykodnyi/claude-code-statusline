@@ -20,7 +20,9 @@
 #
 # Exit status: 0 when every check passed; 1 when any check failed; 2 on a
 # usage error or when sbx / sandboxd is unavailable (helpers may exit
-# non-zero — only statusline.sh itself is never-fail).
+# non-zero — only statusline.sh itself is never-fail). The `sbx kit add`
+# probe (D-37a) is informational: it is reported as a PASS/FAIL line but not
+# counted in the summary — the README follows whichever answer it gives.
 #
 # Only the two sandboxes this script names (NAME and NAME-add) are ever
 # removed; the remove-everything form of `sbx rm` is never used (T-03-10).
@@ -224,24 +226,36 @@ else
   emit "INFO restart: canary gone (value: ${canary:-<none>}) — settings.json re-seeded by the engine; startup merge re-applied statusLine"
 fi
 
-# 5.12 Kit-add probe (research OQ1, D-37a): a sandbox created WITHOUT the kit
-# must receive the script and the statusLine merge after `sbx kit add`.
+# 5.12 Kit-add probe (research OQ1, D-37a): does a sandbox created WITHOUT
+# the kit receive the script and the statusLine merge after `sbx kit add`?
+# This is a research PROBE, not a portability check: either answer is valid
+# and the README follows it (PASS -> the `sbx kit add` sentence stands;
+# FAIL -> document `sbx rm` + recreate with --kit). It is reported as a
+# PASS/FAIL line for the record but NOT counted in the summary, so the
+# summary line certifies only the PORT-01 / PORT-04 / D-32 checks above.
 sbx rm -f "$ADD_NAME" > /dev/null 2>&1 || true
 ADD_CREATE=$(sbx create --name "$ADD_NAME" claude "$PWD" 2>&1); rc_c=$?
-ADD_OUT=""; rc_a=1; r=1
+ADD_OUT=""; rc_a=1; r=1; WAIT_GOT=""
 if [ "$rc_c" -eq 0 ]; then
   ADD_OUT=$(sbx kit add "$ADD_NAME" "$KIT" 2>&1); rc_a=$?
   if [ "$rc_a" -eq 0 ] && wait_statusline "$ADD_NAME" && sx "$ADD_NAME" test -x "$SBX_SL"; then
     r=0
   fi
 fi
-check_ok "sbx kit add delivers kit files + startup merge to an existing sandbox (D-37a)" $r
-if [ "$r" -ne 0 ]; then
+if [ "$r" -eq 0 ]; then
+  KITADD=PASS
+  emit "PASS sbx kit add delivers kit files + startup merge to an existing sandbox (D-37a) [probe, not counted]"
+else
+  KITADD=FAIL
+  emit "FAIL sbx kit add delivers kit files + startup merge to an existing sandbox (D-37a) [probe, not counted — README documents sbx rm + recreate]"
   [ "$rc_c" -eq 0 ] || emit "INFO kit-add probe: sbx create (no kit) failed: $ADD_CREATE"
   emit "INFO kit-add probe: sbx kit add rc=$rc_a output: $ADD_OUT"
-  emit "INFO kit-add probe: .statusLine after add: ${WAIT_GOT:-<none>}"
+  # Only meaningful when `sbx kit add` itself succeeded and the add-sandbox
+  # was actually polled; otherwise WAIT_GOT would be stale or empty.
+  [ "$rc_a" -eq 0 ] && emit "INFO kit-add probe: .statusLine after add: ${WAIT_GOT:-<none>}"
 fi
 sbx rm -f "$ADD_NAME" > /dev/null 2>&1 || true
+emit "INFO probes (not counted): kit-add=$KITADD (D-37a)"
 
 # --- 6. Primary sandbox disposition + summary (summary is the LAST line) ----
 
