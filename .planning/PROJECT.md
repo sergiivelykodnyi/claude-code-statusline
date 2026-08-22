@@ -2,7 +2,7 @@
 
 ## What This Is
 
-A custom `statusline.sh` for Claude Code that renders a two-line status line showing the session at a glance: model name and reasoning effort, current directory, rich git status (branch, dirty state, sync state, ahead/behind, stashes) on line one; context-window usage and 5-hour / weekly rate-limit usage with reset countdowns on line two. It must work identically on the user's host machine (macOS) and inside Docker Sandboxes, installed by symlinking into `~/.claude`.
+A custom `statusline.sh` for Claude Code that renders a two-line status line showing the session at a glance: model name and reasoning effort, current directory, rich git status (branch, dirty state, sync state, ahead/behind, stashes) on line one; context-window usage and 5-hour / weekly rate-limit usage with reset countdowns on line two. It works identically on the user's host machine (macOS) — installed by symlinking `kit/files/home/.claude/statusline.sh` into `~/.claude` — and inside Docker Sandboxes, where the repo's `kit/` sbx mixin kit delivers the same file and merges the `statusLine` setting at every start.
 
 ## Core Value
 
@@ -51,12 +51,12 @@ Segment definitions:
 - ✓ Line 1 renders git branch with dirty marker, remote-sync symbol, ahead/behind counts, and stash count when in a git repo — Phase 2
 - ✓ Segments with no data are hidden entirely (no `⎇` outside git repos, no `#0`, no `↓0`/`↑0`) — Phase 2
 - ✓ Frame prefixes `╭─ `/`╰─ ` removed; both lines render bare (layout correction) — Phase 2
+- ✓ Script works on macOS host and inside Docker Sandboxes — Phase 3 (126-check harness green in both; 7 fixture renders byte-identical host vs sandbox; live `claude` eyeball in both environments passed UAT)
+- ✓ README briefly describes what the status line shows and the symlink command that installs `statusline.sh` into `~/.claude` — Phase 3 (plus the `settings.json` snippet with `refreshInterval 60` and the Docker Sandboxes kit route)
 
 ### Active
 
 - [ ] Line 2 additionally renders Fable 5 weekly percent as `f()` in the weekly segment
-- [ ] Script works on macOS host and inside Docker Sandboxes
-- [ ] README briefly describes what the status line shows and the symlink command that installs `statusline.sh` into `~/.claude`
 
 ### Out of Scope
 
@@ -85,7 +85,7 @@ Segment definitions:
 | Hide empty segments instead of placeholders | Cleaner line; layout stability not valued | ✓ Good — hide gates fell out of Plan 01's structure for free; Plan 02 needed zero script changes |
 | ANSI-colorized output | Better glanceability (e.g. usage color can shift as limits fill) | ✓ Good — SGR 2 faint frame + 7-code palette confirmed readable in light and dark themes (UAT) |
 | ↓ = incoming (pull needed), ↑ = outgoing (push needed) | Confirmed with user against brief's wording | ✓ Applied — `↓N` behind (yellow) / `↑N` ahead (green) from `branch.ab`, hidden at zero (Phase 2) |
-| README-only install (symlink command), no install script | User preference; setup is a one-liner | — Pending |
+| README-only install (symlink command), no install script | User preference; setup is a one-liner | ✓ Applied — `ln -sf` one-liner + `rm -f && cp` variant with overwrite warning; host UAT passed following only the README (Phase 3) |
 | Research the rate-limit data source before committing to one | Not part of the basic stdin payload; reliability unknown | ✓ Resolved — stdin `rate_limits.five_hour`/`.seven_day` covers 5h/1w; only Fable `f()` needs the OAuth endpoint (Phase 4) |
 | Threshold color spans `NN%` only, reset before labels | Resolved plan action-text/verify contradiction in favor of the binding verify | ✓ Applied identically at all three percentage sites (Phase 1) |
 | SGR 2 (faint) for frame/separators | Theme-adaptive dim per D-02 without hardcoding a gray | ✓ Confirmed readable on light and dark themes (Phase 1 UAT) |
@@ -93,6 +93,10 @@ Segment definitions:
 | Semantic per-marker git colors spanning the whole token (magenta branch, yellow `*`/`↓N`, green `≡`/`↑N`, red `≢`, dim `#N`) | Glanceability — each marker reads as one colored unit | ✓ Legible on light and dark themes (Phase 2 UAT) |
 | Type-guard all 10 stdin fields inside the single jq `@sh` program (`strings` on MODEL/EFFORT/DIR, `uint` = numbers→floor→0≤n<1e15 on the 7 numerics) | jq `@sh` quotes each array element as its own eval word (array-payload RCE, CR-02); string `resets_at` reached `$(( ))` (CR-01); floats/exponents leaked stderr | ✓ Both RCEs closed at one choke point, one jq pass preserved, renders byte-identical; 14/14 threats closed in 02-SECURITY.md (Phase 2) |
 | Every new harness security probe must be proven to bite against the pre-fix script | A probe that cannot fail is false assurance (02-VERIFICATION CR-02 was missed by string-only probes) | ✓ Convention established; suite 82 → 125 checks with recorded pre-fix failure sets (Phase 2) |
+| Canonical script lives at `kit/files/home/.claude/statusline.sh`; sandboxes get it via an sbx mixin kit (`kit/spec.yaml`), not a shared `~/.claude` | Docker Sandboxes import neither host `~/.claude` nor host symlinks; a kit is the only route that lands the file at `/home/agent/.claude` | ✓ Pure `git mv` (100755 preserved); kit validated offline and live — `tests/sandbox.sh` 11 checks / 0 failures (Phase 3) |
+| Sandbox `statusLine` wiring = root `setup.startup` idempotent jq merge of only `.statusLine` after the platform seed (`themeId` wait, atomic tmp+mv, chmod 0755, non-recursive chown) | The engine seeds `settings.json` late at create time and would overwrite an install-time merge; startup reconcile survives both create and restart | ✓ Merge present after first start and survives stop/start (restart probe canary kept); every other key preserved (Phase 3) |
+| Existing sandboxes: `sbx rm` + recreate with `--kit`, not `sbx kit add` | sbx v0.39.0 refuses `kit add` for kits declaring `setup.startup` (observed; "does not yet apply") | ✓ README documents recreate; `tests/sandbox.sh` re-probes kit-add on every run so the sentence can flip when sbx supports it (Phase 3) |
+| Cross-environment evidence = raw fixture renders dumped under gitignored `tests/out/<env>/` and compared with POSIX `diff -r` | Byte-for-byte proof of PORT-01 without screenshots or human eyeballing | ✓ `diff -r` empty for all 7 fixtures host vs sandbox (Phase 3) |
 
 ## Evolution
 
@@ -112,4 +116,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-22 after Phase 2*
+*Last updated: 2026-08-22 after Phase 3*

@@ -1,19 +1,19 @@
 ---
 gsd_state_version: 1.0
-current_phase: 03
-current_phase_name: Install & Dual-Environment Validation
-status: verifying
-stopped_at: Completed 03-03-PLAN.md
-last_updated: "2026-08-22T15:15:32.912Z"
+current_phase: 4
+current_phase_name: Fable Weekly f() Segment
+status: planning
+stopped_at: Phase 03 complete, ready to plan Phase 4
+last_updated: "2026-08-22T16:31:42.279Z"
 last_activity: 2026-08-22
-last_activity_desc: Phase 03 execution started
-state_head: b172b21a63922b802388a321b944bba5883679cd
+last_activity_desc: Phase 03 complete, transitioned to Phase 4
+state_head: 6fff1cc68977f7b937cc8953a0a78535e271d05a
 progress:
   total_phases: 4
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 9
   completed_plans: 9
-  percent: 50
+  percent: 75
 ---
 
 # Project State
@@ -23,22 +23,22 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-22)
 
 **Core value:** One glance at the terminal tells you everything about the session: which model at which effort, where you are in git, and how much context and rate limit you have left before things reset.
-**Current focus:** Phase 03 — Install & Dual-Environment Validation
+**Current focus:** Phase 04 — Fable Weekly f() Segment
 
 ## Current Position
 
-Phase: 03 (Install & Dual-Environment Validation) — EXECUTING
-Plan: 3 of 3
-Status: Phase complete — ready for verification
-Last activity: 2026-08-22 — Phase 03 execution started
+Phase: 4 — Fable Weekly f() Segment
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-08-22 — Phase 03 complete, transitioned to Phase 4
 
-Progress: [████████████████████] 6/6 plans ([█████░░░░░] 50%) — Phase 2 of 4 complete (50%)
+Progress: [████████████████████] 9/9 plans ([███████░░░] 75%) — Phase 3 of 4 complete (75%)
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 6
+- Total plans completed: 9
 - Average duration: -
 - Total execution time: -
 
@@ -48,6 +48,7 @@ Progress: [████████████████████] 6/6 pla
 |-------|-------|-------|----------|
 | 01 | 2 | - | - |
 | 02 | 4 | - | - |
+| 03 | 3 | - | - |
 
 **Recent Trend:**
 
@@ -76,22 +77,12 @@ Progress: [████████████████████] 6/6 pla
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
-- [Init]: Rate-limit segments read stdin `rate_limits.five_hour`/`.seven_day` — no API call needed for 5h/1w (research resolved PROJECT.md's open question)
 - [Init]: `f()` Fable weekly is the sole external dependency — isolated behind an adapter seam, cached, fail-silent, deferred to Phase 4
-- [Init]: PORT-02 (render-latency budget) assigned to Phase 2, where the last render-path subprocess (git collector) lands
-- [Phase 01]: Threshold color spans NN% with reset before labels, identical on all three percentage sites; SGR 2 (faint) dim frame/separators confirmed readable on both themes (UAT 2/2, threats_open: 0)
-- [Phase 02]: Git segment = one `git status --porcelain=v2 --branch` + stash `rev-list`, all `GIT_OPTIONAL_LOCKS=0`, uncached; semantic per-marker colors span the whole token; `╭─`/`╰─` frame prefixes dropped (D-17..D-29)
-- [Phase 02]: Latency budget operationalized as 10 sequential renders ≤ 2 whole-clock seconds via portable epoch arithmetic — measured 0–1 s on host (PORT-02)
-- [Phase 02]: All 10 stdin fields type-guarded inside the single jq `@sh` program — `strings` on MODEL/EFFORT/DIR (CR-02 array-vector RCE), `def uint` floor/non-negative/<1e15 on the 7 numerics (CR-01 resets_at RCE + WR-03 stderr leak) — one choke point, one jq pass, byte-identical renders
-- [Phase 02]: Harness convention: security probes assert on fixed PASS-line names, run under /bin/bash 3.2.57, and are proven to bite against the pre-fix script (suite 82 → 125 checks)
-- [Phase 02]: UAT passed 2/2 (git color legibility both themes; prohibition sign-off) — security verified 14/14 closed, threats_open: 0 (02-SECURITY.md)
-- [Phase 03]: Phase 3 kit lives at kit/ (sbx mixin, schemaVersion 2); canonical statusline.sh relocated there by pure git mv (100755, byte-identical, no root shim); startup reconcile = themeId wait + jq merge of only .statusLine + atomic mv + chmod 0755 + non-recursive chown
-- [Phase 03]: Cross-environment evidence via tests/render-fixtures.sh raw renders under gitignored tests/out/<env>/, compared with POSIX diff -r; harness exec-bit check proven to bite (126 checks)
-- [Phase 03]: README (97 lines, D-40 shape) documents host ln -sf into kit/files/home/.claude/statusline.sh + rm -f && cp variant with overwrite warning, the D-34 statusLine snippet with padding 0 / refreshInterval 60, a full.json verify command proven against the shipped script, and both sbx kit routes (local --kit / sbx kit add, git+https to the real repo name claude-code-statusline); ~/.claude untouched (D-46)
-- [Phase 03]: ARCHITECTURE.md and PROJECT.md reconciled: kit/ is the canonical script location, sandboxes do not import host ~/.claude, the sbx mixin kit is the sandbox install route
-- [Phase 03]: 03-03: sbx kit add probe (D-37a) is informational — reported as PASS/FAIL but not counted in tests/sandbox.sh's summary; the summary certifies only PORT-01/PORT-04/D-32 checks
-- [Phase 03]: 03-03: README documents sbx rm + recreate with --kit for existing sandboxes — sbx v0.39.0 refuses sbx kit add for kits declaring setup.startup (observed); sbx kit add sentence removed (D-37)
-- [Phase 03]: 03-03: restart probe PASS with canary surviving — engine does not re-seed settings.json, kit startup merge is idempotent; no project-scope .claude/settings.json fallback added to README (D-32)
+- [Phase 02]: All 10 stdin fields type-guarded inside the single jq `@sh` program — one choke point, one jq pass, byte-identical renders; every new security probe must be proven to bite against the pre-fix script
+- [Phase 03]: Canonical script is `kit/files/home/.claude/statusline.sh` (pure `git mv`, 100755); host installs by `ln -sf`, sandboxes by the `kit/` sbx mixin kit whose root `setup.startup` jq-merges only `.statusLine` after the platform seed (themeId wait, atomic mv, chmod 0755, non-recursive chown)
+- [Phase 03]: `sbx kit add` is refused by sbx v0.39.0 for kits declaring `setup.startup` — README documents `sbx rm` + recreate; `tests/sandbox.sh` re-probes on every run (D-37a) so the sentence can flip on a future sbx
+- [Phase 03]: Cross-environment evidence = `tests/render-fixtures.sh` raw renders under gitignored `tests/out/<env>/` + POSIX `diff -r` (7/7 byte-identical); `tests/sandbox.sh` 11 checks / 0 failures; UAT 3/3 passed; 15/15 threats closed (03-SECURITY.md)
+- [Phase 04 prep]: OAuth `GET /api/oauth/usage` endpoint, window key naming, `utilization` scale, and sandbox credential presence are the open research items for `f()`
 
 ### Pending Todos
 
@@ -99,7 +90,6 @@ None yet.
 
 ### Blockers/Concerns
 
-- [Phase 3]: Docker Sandbox symlink/`~/.claude` mount behavior is unvalidated — a host-absolute symlink may dangle in the container; verify empirically before finalizing the README install story
 - [Phase 4]: OAuth usage endpoint is undocumented and reported unstable — confirm window key naming and `utilization` scale (0-1 vs 0-100) during phase planning
 
 ### Roadmap Evolution
@@ -116,6 +106,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-08-22T15:15:32.829Z
-Stopped at: Completed 03-03-PLAN.md
+Last session: 2026-08-22T16:32:00Z
+Stopped at: Phase 03 complete (UAT 3/3, security 0 open), ready to plan Phase 4
 Resume file: None

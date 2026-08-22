@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Core Status Line from Stdin** - Two-line colorized status with model, effort, directory, context, and rate limits rendered entirely from the stdin payload (completed 2026-08-21)
 - [x] **Phase 2: Git Segment** - Branch, dirty marker, sync symbol, ahead/behind, and stash count with all edge states, within the render-latency budget; layout correction: drop the `╭─ `/`╰─ ` frame prefixes (completed 2026-08-22)
-- [ ] **Phase 3: Install & Dual-Environment Validation** - Symlink install verified identical on macOS host and Docker Sandbox, documented in README
+- [x] **Phase 3: Install & Dual-Environment Validation** - Symlink install verified identical on macOS host and Docker Sandbox, documented in README (completed 2026-08-22)
 - [ ] **Phase 4: Fable Weekly f() Segment** - Fable-specific weekly usage via the OAuth endpoint, cached and fail-silent
 
 ## Phase Details
@@ -87,7 +87,7 @@ Plans:
   3. Reset countdowns keep ticking while the session is idle, via the `refreshInterval` in the documented settings snippet
   4. README shows what the status line displays (with the example output) plus the symlink install command and the `statusLine` settings snippet
 
-**Plans:** 3/3 plans executed
+**Plans:** 3/3 plans complete
 
 Plans:
 **Wave 1**
@@ -127,5 +127,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 |-------|----------------|--------|-----------|
 | 1. Core Status Line from Stdin | 2/2 | Complete    | 2026-08-21 |
 | 2. Git Segment | 4/4 | Complete    | 2026-08-22 |
-| 3. Install & Dual-Environment Validation | 3/3 | In Progress|  |
+| 3. Install & Dual-Environment Validation | 3/3 | Complete    | 2026-08-22 |
 | 4. Fable Weekly f() Segment | 0/? | Not started | - |
