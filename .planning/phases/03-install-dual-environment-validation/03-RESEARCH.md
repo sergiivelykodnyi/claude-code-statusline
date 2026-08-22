@@ -414,18 +414,20 @@ SL=kit/files/home/.claude/statusline.sh          # was: statusline.sh
 | A5 | Engine copies `files/home` at creation only and preserves the exec bit | Pattern 1 | Covered by `chmod 0755` in startup reconcile |
 | A6 | The GitHub repo `sergiivelykodnyi/claude-code-statusline` is public (needed for anonymous `git+https` kit refs) | Pitfall 6 | README documents a reference readers can't use; local `--kit` path still works |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Does `sbx kit add` deliver `files/` and `setup.startup` on v0.39.0?**
+All four are closed by the Phase 3 plans: each has a concrete probe or evidence step whose outcome settles it at execution time and is recorded in `tests/out/sandbox/EVIDENCE.txt` and the 03-03 SUMMARY; the README follows the observed result (03-03 Task 3).
+
+1. **Does `sbx kit add` deliver `files/` and `setup.startup` on v0.39.0?** — RESOLVED → 03-03-PLAN Task 1 step 12 (kit-add probe: create `<NAME>-add` without a kit, `sbx kit add`, then `wait_statusline` + `test -x`; check name `sbx kit add delivers ...`); 03-03 Task 3 keeps or replaces the README `sbx kit add` sentence per the PASS/FAIL line.
    - What we know: docs say only env vars / install / network-allow; CLI says container recreated with kit appended.
    - What's unclear: which is current.
    - Recommendation: plan a UAT step — `sbx create claude .` (no kit) → `sbx kit add NAME "$PWD/kit"` → check `~/.claude/statusline.sh` + `statusLine`. Word the README sentence accordingly; if unsupported, document recreate.
-2. **Does the engine rewrite `settings.json` on every start (not only at create)?**
+2. **Does the engine rewrite `settings.json` on every start (not only at create)?** — RESOLVED → 03-03-PLAN Task 1 step 11 (stop/start probe with an in-sandbox canary key; check name `statusLine survives stop/start (D-32)`); on FAIL, 03-03 Task 3 applies the CONTEXT fallback (document project-scope `.claude/settings.json`) and records it.
    - What we know: create-time late overwrite (contrib comment); "each `sbx run` … blank settings.json" (community, sbx 0.38).
    - What's unclear: v0.39.0 restart behaviour.
    - Recommendation: startup reconcile covers both; UAT: `sbx stop` + `sbx run --name` and re-check `.statusLine`. If the reconcile itself is reverted *after* running (engine writes after the 60 s window), fall back to the deferred project-scope `.claude/settings.json` route (precedence: project settings override user settings [CITED: code.claude.com/docs/en/settings — "a key at a higher level overrides the same key anywhere below it"; shared project sits above user]).
-3. **Is the sandbox's `$HOME/.claude/statusline.sh` rendered via the kit identical to the repo copy byte-for-byte?** Expected yes (same file); the render-dump `installed` vs `repo` diff answers it (PORT-04).
-4. **`sbx run shell` image contents (jq/git)?** Not needed if the harness runs via `sbx exec` in the `claude` sandbox; note only.
+3. **Is the sandbox's `$HOME/.claude/statusline.sh` rendered via the kit identical to the repo copy byte-for-byte?** — RESOLVED → the PORT-04 render diff: `tests/render-fixtures.sh` (03-01-PLAN Task 2) run inside the sandbox with `INSTALLED=/home/agent/.claude/statusline.sh REQUIRE_INSTALLED=1` (03-03 Task 1 steps 8 and 10; check names `render dump in sandbox: installed == repo (PORT-04 sandbox half)` and `PORT-04: host vs sandbox installed-path renders byte-identical`). Expected yes (same file).
+4. **`sbx run shell` image contents (jq/git)?** — RESOLVED: not needed — the harness runs via `sbx exec` in the `claude` sandbox (03-03 Task 1 step 7); `sbx run shell` is not used anywhere in Phase 3.
 
 ## Environment Availability
 
