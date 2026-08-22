@@ -87,7 +87,7 @@ Plans:
   3. Reset countdowns keep ticking while the session is idle, via the `refreshInterval` in the documented settings snippet
   4. README shows what the status line displays (with the example output) plus the symlink install command and the `statusLine` settings snippet
 
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans executed
 
 Plans:
 **Wave 1**
@@ -100,7 +100,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 03-03-PLAN.md — Live sandbox evidence: tests/sandbox.sh (create-with-kit, exec checks, harness + render dump in sandbox, host/sandbox byte diff, restart + kit-add probes), README reconciled with observations, live check hand-off
+- [x] 03-03-PLAN.md — Live sandbox evidence: tests/sandbox.sh (create-with-kit, exec checks, harness + render dump in sandbox, host/sandbox byte diff, restart + kit-add probes), README reconciled with observations, live check hand-off
 
 ### Phase 4: Fable Weekly f() Segment
 
@@ -127,5 +127,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 |-------|----------------|--------|-----------|
 | 1. Core Status Line from Stdin | 2/2 | Complete    | 2026-08-21 |
 | 2. Git Segment | 4/4 | Complete    | 2026-08-22 |
-| 3. Install & Dual-Environment Validation | 2/3 | In Progress|  |
+| 3. Install & Dual-Environment Validation | 3/3 | In Progress|  |
 | 4. Fable Weekly f() Segment | 0/? | Not started | - |

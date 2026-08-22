@@ -50,10 +50,10 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Portability & Robustness
 
-- [ ] **PORT-01**: The script produces identical output on macOS host (bash 3.2, BSD userland) and inside Docker Sandboxes (Linux, GNU userland)
+- [x] **PORT-01**: The script produces identical output on macOS host (bash 3.2, BSD userland) and inside Docker Sandboxes (Linux, GNU userland)
 - [x] **PORT-02**: The script completes fast enough that Claude Code never blanks the line (well under the ~300ms debounce), using a single jq pass and a single primary git status call
 - [x] **PORT-03**: The script never emits stderr noise or non-zero exits that would blank the status line; missing fields and errors degrade to hidden segments
-- [ ] **PORT-04**: The script works when invoked via a symlink from `~/.claude/statusline.sh`, verified in both environments
+- [x] **PORT-04**: The script works when invoked via a symlink from `~/.claude/statusline.sh`, verified in both environments
 
 ### Documentation
 
@@ -110,8 +110,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | GIT-05 | Phase 2 | Complete |
 | GIT-06 | Phase 2 | Complete |
 | PORT-02 | Phase 2 | Complete |
-| PORT-01 | Phase 3 | Pending |
-| PORT-04 | Phase 3 | Pending |
+| PORT-01 | Phase 3 | Complete |
+| PORT-04 | Phase 3 | Complete |
 | DOCS-01 | Phase 3 | Complete |
 | DOCS-02 | Phase 3 | Complete |
 | FAB-01 | Phase 4 | Pending |

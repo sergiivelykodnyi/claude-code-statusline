@@ -2,17 +2,17 @@
 gsd_state_version: 1.0
 current_phase: 03
 current_phase_name: Install & Dual-Environment Validation
-status: executing
-stopped_at: Completed 03-02-PLAN.md
-last_updated: "2026-08-22T12:10:10.765Z"
+status: verifying
+stopped_at: Completed 03-03-PLAN.md
+last_updated: "2026-08-22T15:15:32.912Z"
 last_activity: 2026-08-22
 last_activity_desc: Phase 03 execution started
-state_head: 5cccf711b20292bdeb62991a642a4c8a29891808
+state_head: b172b21a63922b802388a321b944bba5883679cd
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 9
-  completed_plans: 8
+  completed_plans: 9
   percent: 50
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-08-22)
 
 Phase: 03 (Install & Dual-Environment Validation) — EXECUTING
 Plan: 3 of 3
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-08-22 — Phase 03 execution started
 
 Progress: [████████████████████] 6/6 plans ([█████░░░░░] 50%) — Phase 2 of 4 complete (50%)
@@ -67,6 +67,7 @@ Progress: [████████████████████] 6/6 pla
 | Phase 02 P04 | 4 min | 3 tasks | 2 files |
 | Phase 03 P01 | 5 min | 2 tasks | 5 files |
 | Phase 03 P02 | 3 min | 2 tasks | 3 files |
+| Phase 03 P03 | 3h 0m | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -88,6 +89,9 @@ Recent decisions affecting current work:
 - [Phase 03]: Cross-environment evidence via tests/render-fixtures.sh raw renders under gitignored tests/out/<env>/, compared with POSIX diff -r; harness exec-bit check proven to bite (126 checks)
 - [Phase 03]: README (97 lines, D-40 shape) documents host ln -sf into kit/files/home/.claude/statusline.sh + rm -f && cp variant with overwrite warning, the D-34 statusLine snippet with padding 0 / refreshInterval 60, a full.json verify command proven against the shipped script, and both sbx kit routes (local --kit / sbx kit add, git+https to the real repo name claude-code-statusline); ~/.claude untouched (D-46)
 - [Phase 03]: ARCHITECTURE.md and PROJECT.md reconciled: kit/ is the canonical script location, sandboxes do not import host ~/.claude, the sbx mixin kit is the sandbox install route
+- [Phase 03]: 03-03: sbx kit add probe (D-37a) is informational — reported as PASS/FAIL but not counted in tests/sandbox.sh's summary; the summary certifies only PORT-01/PORT-04/D-32 checks
+- [Phase 03]: 03-03: README documents sbx rm + recreate with --kit for existing sandboxes — sbx v0.39.0 refuses sbx kit add for kits declaring setup.startup (observed); sbx kit add sentence removed (D-37)
+- [Phase 03]: 03-03: restart probe PASS with canary surviving — engine does not re-seed settings.json, kit startup merge is idempotent; no project-scope .claude/settings.json fallback added to README (D-32)
 
 ### Pending Todos
 
@@ -112,6 +116,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-08-22T12:10:10.691Z
-Stopped at: Completed 03-02-PLAN.md
+Last session: 2026-08-22T15:15:32.829Z
+Stopped at: Completed 03-03-PLAN.md
 Resume file: None
