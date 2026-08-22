@@ -116,12 +116,12 @@ Plans:
   3. On any failure — no credentials, endpoint change, timeout, offline — `f()` silently disappears while every other segment renders normally
   4. Repeated renders within the cache TTL make no network call, and a cold fetch never delays the render beyond its short curl timeout
 
-**Plans**: 4 plans
+**Plans**: 1/4 plans executed
 
 Plans:
 **Wave 1**
 
-- [ ] 04-01-PLAN.md — Tracer: Fable weekly adapter (iso_to_epoch, get_token file→Keychain, 300 s/0600 atomic cache with 3600 s grace, curl -K - fetch, negative cache, kill switch, stdin-first probe) + seg_fable last on line 2, proven via file:// fixture and a live host render; kill switch exported in harness + dumper
+- [x] 04-01-PLAN.md — Tracer: Fable weekly adapter (iso_to_epoch, get_token file→Keychain, 300 s/0600 atomic cache with 3600 s grace, curl -K - fetch, negative cache, kill switch, stdin-first probe) + seg_fable last on line 2, proven via file:// fixture and a live host render; kill switch exported in harness + dumper
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -142,4 +142,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | 1. Core Status Line from Stdin | 2/2 | Complete    | 2026-08-21 |
 | 2. Git Segment | 4/4 | Complete    | 2026-08-22 |
 | 3. Install & Dual-Environment Validation | 3/3 | Complete    | 2026-08-22 |
-| 4. Fable Weekly f() Segment | 0/4 | Not started | - |
+| 4. Fable Weekly f() Segment | 1/4 | In Progress|  |
