@@ -3,16 +3,16 @@ gsd_state_version: 1.0
 current_phase: 04
 current_phase_name: Fable Weekly f() Segment
 status: executing
-stopped_at: Completed 04-01-PLAN.md
-last_updated: "2026-08-22T21:38:52.938Z"
+stopped_at: Completed 04-02-PLAN.md
+last_updated: "2026-08-22T21:56:52.571Z"
 last_activity: 2026-08-22
 last_activity_desc: Phase 04 execution started
-state_head: ded30e97fcbf0c712232a6eae7042da177d2e4e6
+state_head: 34eb4d0078ee5a8bb52be26199b4a5241ac38f9e
 progress:
   total_phases: 4
   completed_phases: 3
   total_plans: 13
-  completed_plans: 10
+  completed_plans: 11
   percent: 75
 ---
 
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-08-22)
 ## Current Position
 
 Phase: 04 (Fable Weekly f() Segment) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-08-22 — Phase 04 execution started
 
@@ -70,6 +70,7 @@ Progress: [████████████████████] 9/9 pla
 | Phase 03 P02 | 3 min | 2 tasks | 3 files |
 | Phase 03 P03 | 3h 0m | 3 tasks | 2 files |
 | Phase 04 P01 | 16 min | 2 tasks | 5 files |
+| Phase 04 P02 | 8 min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -87,6 +88,8 @@ Recent decisions affecting current work:
 - [Phase 04]: Fable value is a separate last line-2 peer segment "Fable NN%/1w (countdown)" (D-51), not f(pct) inside the weekly segment; docs reconciled in 04-04
 - [Phase 04]: Fable source order stdin model_scoped (D-48, empty today) -> 300 s TTL cache -> OAuth usage endpoint via curl -K - with the read-only token (credentials file -> Keychain, expiresAt pre-check) -> 3600 s grace -> hidden
 - [Phase 04]: Shared per-user cache ~/.claude/statusline-usage-cache.json, 0600 via mktemp+mv -f, negative results cached; STATUSLINE_NO_FABLE kill switch exported in tests/run.sh and tests/render-fixtures.sh keeps the harness hermetic
+- [Phase 04]: stdin array on model_scoped[0].resets_at asserted as 'Fable 33%/1w' without parens (pct kept, D-54) rather than hidden — the guard empties only the reset
+- [Phase 04]: Exported kill switch is load-bearing for harness hermeticity: M1 bite run showed the fixture loop going live (Keychain + endpoint) without it; nothing written under ~/.claude
 
 ### Pending Todos
 
@@ -117,6 +120,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-08-22T21:38:30.402Z
-Stopped at: Completed 04-01-PLAN.md
+Last session: 2026-08-22T21:56:52.441Z
+Stopped at: Completed 04-02-PLAN.md
 Resume file: None
