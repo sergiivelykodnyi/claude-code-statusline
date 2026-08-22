@@ -3,8 +3,12 @@
 # kit/files/home/.claude/statusline.sh (D-31: the sbx kit path).
 # One command proves the whole contract: helper tables, all fixture states,
 # exit/stderr silence, threshold colors, palette purity, eval-injection
-# safety, and the git-state matrix against real temp repos. bash 3.2-safe
-# (runs on the macOS host /bin/bash).
+# safety, the git-state matrix against real temp repos, and the Fable weekly
+# adapter probes (fixture-served endpoint over file://, cache TTL/grace,
+# negative cache, credentials rules, kill switch, stdin probe, bounded
+# timeout, hostile stdin/cache/endpoint bodies). bash 3.2-safe (runs on the
+# macOS host /bin/bash); hermetic — no Keychain, no network, nothing under
+# the real ~/.claude.
 #
 # Usage: /bin/bash tests/run.sh
 # Prints one PASS/FAIL line per check; exits non-zero if any check failed.
@@ -80,6 +84,39 @@ for pair in -5:now 0:now '30:<1m' '59:<1m' 60:1m 3000:50m 10200:2h:50m \
   n=${pair%%:*}; want=${pair#*:}
   check_eq "fmt_duration $n -> $want" "$want" "$(fmt_duration "$n")"
 done
+
+# iso_to_epoch — the 17-row RESEARCH Pattern 3 table (D-54): UTC forms,
+# fractional seconds, ±HH:MM and ±HHMM offsets, leap days, the century
+# boundary, epoch 0, year-end, and the unparseable rows (garbage, month 13,
+# empty, date-only, injected subscript string) which must yield the empty
+# string — never an error, never arithmetic on the input. Specs are
+# |-delimited because ISO strings carry ':'. Expected epochs were
+# cross-checked against Python at research time; the table is hard-coded so
+# the harness stays dependency-free.
+rm -f tests/.pwned
+for spec in '2026-08-24T18:00:00.097816+00:00|1787594400' \
+            '2026-08-24T17:59:59.939927+00:00|1787594399' \
+            '2026-08-24T18:00:00Z|1787594400' \
+            '2026-08-24T18:00:00+02:00|1787587200' \
+            '2026-08-24T18:00:00-05:30|1787614200' \
+            '2026-08-24T18:00:00+0200|1787587200' \
+            '2000-02-29T00:00:00Z|951782400' \
+            '1970-01-01T00:00:00Z|0' \
+            '2100-03-01T12:34:56.5Z|4107587696' \
+            '2026-02-28T23:59:59Z|1772323199' \
+            '2028-02-29T00:00:00Z|1835395200' \
+            '2026-12-31T23:59:59Z|1798761599' \
+            'garbage|' \
+            '2026-13-01T00:00:00Z|' \
+            '|' \
+            '2026-08-24|' \
+            '2026-08-24T18:00:00x[$(touch tests/.pwned)]|'; do
+  iso=${spec%%|*}; want=${spec#*|}
+  check_eq "iso_to_epoch ${iso:-<empty>} -> ${want:-<empty>}" "$want" "$(iso_to_epoch "$iso")"
+done
+[ ! -e tests/.pwned ]
+check_ok "iso_to_epoch injected string: tests/.pwned not created" $?
+rm -f tests/.pwned
 
 # pct_color — 69/70/89/90 boundary quartet (D-03/D-04, PRES-03).
 check_eq "pct_color 69 -> GREEN"  "$GREEN"  "$(pct_color 69)"
@@ -429,6 +466,164 @@ fi
 if [ -e "$HOME/.claude/statusline.sh" ]; then
   printf 'INFO installed: %s\n' "$(ls -l "$HOME/.claude/statusline.sh")"
 fi
+
+# --- 11. Fable weekly (FAB-01..04, D-47..D-65) -------------------------------
+# The adapter's live path, exercised hermetically: the exported kill switch
+# is cleared per command, the endpoint is a file:// fixture (or a missing
+# path / a blackhole address), the credentials file is a synthetic JSON
+# generated here under $TESTTMP (never committed, never a real token), and
+# the cache lives under $TESTTMP — no probe reads the Keychain, reaches the
+# network, or touches the real ~/.claude (D-64, D-65).
+
+# fable_render CACHE URL CREDS FIXTURE — mirrors git_render's capture
+# discipline into globals FB_OUT (raw) / FB_RC / FB_ERRBYTES / FB_L2
+# (ANSI-stripped line 2). Every Fable probe goes through it unless a probe
+# needs a different env (kill switch on, curl max-time knob).
+fable_render() {
+  FB_OUT=$(STATUSLINE_NO_FABLE= STATUSLINE_USAGE_CACHE="$1" STATUSLINE_USAGE_URL="$2" STATUSLINE_CREDENTIALS_FILE="$3" /bin/bash "$SL" < "$4" 2>"$ERRTMP"); FB_RC=$?
+  FB_ERRBYTES=$(wc -c < "$ERRTMP" | tr -d '[:space:]')
+  FB_L2=$(printf '%s\n' "$FB_OUT" | strip_ansi | sed -n 2p)
+}
+
+FIX_URL="file://$PWD/tests/fixtures/usage/fable.json"      # 74 %, resets_at epoch 0
+NOB_URL="file://$PWD/tests/fixtures/usage/no-bucket.json"  # valid answer, no Fable bucket
+CACHE="$TESTTMP/usage.json"
+CREDS="$TESTTMP/creds.json"                 # synthetic, far-future expiresAt
+CREDS_EXP="$TESTTMP/creds-expired.json"     # synthetic, expired expiresAt (epoch ms)
+NOCREDS="$TESTTMP/none.json"                # never created
+printf '%s\n' '{"claudeAiOauth":{"accessToken":"test-token","expiresAt":9999999999999}}' > "$CREDS"
+printf '%s\n' '{"claudeAiOauth":{"accessToken":"test-token","expiresAt":1000}}' > "$CREDS_EXP"
+L2_BASE="10%/100k/1M · 50%/5h (now) · 15%/1w (now)"   # full.json line 2 without Fable
+
+# 11.1 Cold render: fetch from the fixture, render the peer segment last,
+# write the 0600 cache with the fetched values (FAB-01, FAB-03, D-51, D-57).
+rm -f "$CACHE"
+fable_render "$CACHE" "$FIX_URL" "$CREDS" tests/fixtures/full.json
+check_eq "fable: cold render exit code" "0" "$FB_RC"
+check_eq "fable: cold render stderr bytes" "0" "$FB_ERRBYTES"
+check_eq "fable: cold render line 2" "$L2_BASE · Fable 74%/1w (now)" "$FB_L2"
+check_eq "fable: cache file mode -rw-------" "-rw-------" "$(ls -l "$CACHE" | cut -c1-10)"
+check_eq "fable: cache content [true,74,0]" "[true,74,0]" \
+  "$(jq -c '[.fetched_at > 0, .pct, .resets_at]' "$CACHE")"
+
+# 11.2 Bytes: dim label, threshold colour on the number only, plain /1w
+# (D-05, D-51, D-53); palette purity over the Fable render (D-02).
+want="${ESC}[2mFable${ESC}[0m ${ESC}[33m74%${ESC}[0m/1w"
+case "$FB_OUT" in *"$want"*) r=0;; *) r=1;; esac
+check_ok "fable: label+threshold bytes pct 74" $r
+r=0
+for s in $(printf '%s\n' "$FB_OUT" \
+             | grep -o "${ESC}\[[0-9;]*m" | sed "s/${ESC}\[//" | sort -u); do
+  case " 0m 2m 31m 32m 33m 34m 35m 36m " in
+    *" $s "*) ;;
+    *) r=1; printf '  unexpected SGR sequence: %s\n' "$s" ;;
+  esac
+done
+check_ok "fable: palette purity" $r
+
+# threshold quartet on the fetched percent (D-03/D-04): mutated fixture
+# copies served via file:// from $TESTTMP, fresh cache each time.
+for spec in 69:32 70:33 89:33 90:31; do
+  p=${spec%%:*}; code=${spec#*:}
+  jq --argjson p "$p" '(.limits[] | select(.kind=="weekly_scoped") | .percent) = $p' \
+     tests/fixtures/usage/fable.json > "$TESTTMP/fable-p$p.json"
+  rm -f "$CACHE"
+  fable_render "$CACHE" "file://$TESTTMP/fable-p$p.json" "$CREDS" tests/fixtures/full.json
+  want="${ESC}[2mFable${ESC}[0m ${ESC}[${code}m${p}%${ESC}[0m/1w"
+  case "$FB_OUT" in *"$want"*) r=0;; *) r=1;; esac
+  check_ok "fable: threshold bytes pct $p -> SGR ${code}m" $r
+done
+
+# 11.3 Cache lifecycle (FAB-03, D-56..D-58): a fresh cache is served without
+# a fetch (the URL is switched to a 42 % fixture — a fetch would show 42);
+# a stale cache is served while the endpoint is unreachable (grace); past
+# the grace window the segment hides with no stderr.
+rm -f "$CACHE"
+fable_render "$CACHE" "$FIX_URL" "$CREDS" tests/fixtures/full.json       # warm: 74
+jq '(.limits[] | select(.kind=="weekly_scoped") | .percent) = 42' \
+   tests/fixtures/usage/fable.json > "$TESTTMP/fable-42.json"
+fable_render "$CACHE" "file://$TESTTMP/fable-42.json" "$CREDS" tests/fixtures/full.json
+case "$FB_L2" in *"Fable 74%/1w (now)"*) r=0;; *) r=1;; esac
+check_ok "fable: cache hit (no fetch)" $r
+jq --argjson now "$(date +%s)" '.fetched_at = $now - 400' "$CACHE" > "$CACHE.new" && mv "$CACHE.new" "$CACHE"
+fable_render "$CACHE" "file:///nonexistent" "$CREDS" tests/fixtures/full.json
+case "$FB_L2" in *"Fable 74%/1w (now)"*) r=0;; *) r=1;; esac
+check_ok "fable: stale-grace serve" $r
+jq --argjson now "$(date +%s)" '.fetched_at = $now - 4000' "$CACHE" > "$CACHE.new" && mv "$CACHE.new" "$CACHE"
+fable_render "$CACHE" "file:///nonexistent" "$CREDS" tests/fixtures/full.json
+check_eq "fable: past-grace hide" "$L2_BASE" "$FB_L2"
+check_eq "fable: past-grace stderr bytes" "0" "$FB_ERRBYTES"
+
+# 11.4 Missing resets_at: number without parens (D-54).
+jq '(.limits[] | select(.kind=="weekly_scoped") | .resets_at) = null' \
+   tests/fixtures/usage/fable.json > "$TESTTMP/fable-norst.json"
+rm -f "$CACHE"
+fable_render "$CACHE" "file://$TESTTMP/fable-norst.json" "$CREDS" tests/fixtures/full.json
+check_eq "fable: no resets_at -> no parens" "$L2_BASE · Fable 74%/1w" "$FB_L2"
+
+# 11.5 No Fable bucket: hidden, and the negative result is cached so the
+# next render does not fetch even though the URL now points at the valid
+# fixture (D-49, RESEARCH Pitfall 2).
+rm -f "$CACHE"
+fable_render "$CACHE" "$NOB_URL" "$CREDS" tests/fixtures/full.json
+check_eq "fable: no bucket hidden" "$L2_BASE" "$FB_L2"
+check_eq "fable: negative cache written" "null" "$(jq -c .pct "$CACHE" 2>/dev/null)"
+fable_render "$CACHE" "$FIX_URL" "$CREDS" tests/fixtures/full.json
+check_eq "fable: negative cache hit (no fetch)" "$L2_BASE" "$FB_L2"
+
+# 11.6 Credentials rules (D-60, D-62): no credentials file / expired token ->
+# hidden, no fetch, no cache write.
+rm -f "$CACHE"
+fable_render "$CACHE" "$FIX_URL" "$NOCREDS" tests/fixtures/full.json
+check_eq "fable: no credentials hidden" "$L2_BASE" "$FB_L2"
+test ! -e "$CACHE"
+check_ok "fable: no credentials no cache" $?
+rm -f "$CACHE"
+fable_render "$CACHE" "$FIX_URL" "$CREDS_EXP" tests/fixtures/full.json
+check_eq "fable: expired token hidden" "$L2_BASE" "$FB_L2"
+test ! -e "$CACHE"
+check_ok "fable: expired token no cache" $?
+
+# 11.7 Kill switch over a warm cache: nothing else runs (D-64).
+rm -f "$CACHE"
+fable_render "$CACHE" "$FIX_URL" "$CREDS" tests/fixtures/full.json       # warm: 74
+out=$(STATUSLINE_NO_FABLE=1 STATUSLINE_USAGE_CACHE="$CACHE" STATUSLINE_USAGE_URL="$FIX_URL" \
+      STATUSLINE_CREDENTIALS_FILE="$CREDS" /bin/bash "$SL" < tests/fixtures/full.json)
+check_eq "fable: kill switch hidden" "$L2_BASE" "$(printf '%s\n' "$out" | strip_ansi | sed -n 2p)"
+
+# 11.8 Stdin first (D-48): rate_limits.model_scoped on stdin wins, no cache,
+# no network, no credentials needed.
+rm -f "$CACHE"
+fable_render "$CACHE" "file:///nonexistent" "$NOCREDS" tests/fixtures/fable-stdin.json
+check_eq "fable: stdin-first line 2" "$L2_BASE · Fable 33%/1w (now)" "$FB_L2"
+test ! -e "$CACHE"
+check_ok "fable: stdin-first no cache" $?
+
+# 11.9 Peer rule (D-55): Fable renders alone after context when the stdin
+# rate-limit windows are absent.
+rm -f "$CACHE"
+fable_render "$CACHE" "$FIX_URL" "$CREDS" tests/fixtures/no-rate-limits.json
+check_eq "fable: alone on line 2" "10%/100k/1M · Fable 74%/1w (now)" "$FB_L2"
+
+# 11.10 Timeout / offline (FAB-03, FAB-04, D-59): a blackhole endpoint
+# (TEST-NET-1, never routed) with the curl bound lowered to 1 s must hide the
+# segment, exit 0, print nothing on stderr, and finish well inside the
+# bound. Upper bound only (RESEARCH Pitfall 6): on the host curl waits for
+# --max-time, behind a sandbox proxy it fails immediately — both hide.
+rm -f "$CACHE"
+t0=$(date +%s)
+out=$(STATUSLINE_NO_FABLE= STATUSLINE_CURL_MAX_TIME=1 STATUSLINE_USAGE_CACHE="$CACHE" \
+      STATUSLINE_USAGE_URL=http://192.0.2.1/ STATUSLINE_CREDENTIALS_FILE="$CREDS" \
+      /bin/bash "$SL" < tests/fixtures/full.json 2>"$ERRTMP"); rc=$?
+t1=$(date +%s)
+errbytes=$(wc -c < "$ERRTMP" | tr -d '[:space:]')
+check_eq "fable: timeout exit code" "0" "$rc"
+check_eq "fable: timeout hidden" "$L2_BASE" "$(printf '%s\n' "$out" | strip_ansi | sed -n 2p)"
+check_eq "fable: timeout stderr bytes" "0" "$errbytes"
+[ $(( t1 - t0 )) -le 3 ]
+check_ok "fable: timeout wall <= 3s" $?
+
+rm -f "$CACHE"
 
 # --- Result -----------------------------------------------------------------
 
