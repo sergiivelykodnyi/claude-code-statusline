@@ -161,21 +161,25 @@ seg_1w() {
 # --- Main -------------------------------------------------------------------
 
 main() {
-  # Ingestion: one jq pass, @sh-quoted, // "" on every field. Do not branch
-  # on jq's exit code (empty stdin exits 0 with no output).
-  local input vars sep model_seg dir_seg git_seg body
+  # Ingestion: one jq pass, @sh-quoted, // "" on every field, plus a numeric
+  # type guard on the 7 numeric fields: a non-number (string, object, ...)
+  # becomes the empty string and is skipped by the hide-on-empty gates below,
+  # so untrusted stdin can never reach the $(( )) arithmetic sinks (bash 3.2
+  # command-substitutes an array subscript there). Do not branch on jq's
+  # exit code (empty stdin exits 0 with no output).
+  local input vars sep model_seg dir_seg git_seg body NOW LINE1 LINE2
   input=$(cat)
   vars=$(printf '%s' "$input" | jq -r '@sh "
     MODEL=\(.model.display_name // "")
     EFFORT=\(.effort.level // "")
     DIR=\(.workspace.current_dir // "")
-    CTX_PCT=\(.context_window.used_percentage // "")
-    CTX_TOK=\(.context_window.total_input_tokens // "")
-    CTX_WIN=\(.context_window.context_window_size // "")
-    P5_PCT=\(.rate_limits.five_hour.used_percentage // "")
-    P5_RST=\(.rate_limits.five_hour.resets_at // "")
-    P7_PCT=\(.rate_limits.seven_day.used_percentage // "")
-    P7_RST=\(.rate_limits.seven_day.resets_at // "")
+    CTX_PCT=\(.context_window.used_percentage // "" | numbers // "")
+    CTX_TOK=\(.context_window.total_input_tokens // "" | numbers // "")
+    CTX_WIN=\(.context_window.context_window_size // "" | numbers // "")
+    P5_PCT=\(.rate_limits.five_hour.used_percentage // "" | numbers // "")
+    P5_RST=\(.rate_limits.five_hour.resets_at // "" | numbers // "")
+    P7_PCT=\(.rate_limits.seven_day.used_percentage // "" | numbers // "")
+    P7_RST=\(.rate_limits.seven_day.resets_at // "" | numbers // "")
   " ' 2>/dev/null)
   eval "$vars"
 
