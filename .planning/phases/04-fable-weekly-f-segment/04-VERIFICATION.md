@@ -1,19 +1,22 @@
 ---
 phase: 04-fable-weekly-f-segment
 verified: 2026-08-23T00:10:00Z
-status: human_needed
+status: passed
 score: 29/32 must-haves verified
 behavior_unverified: 0
 overrides_applied: 0
 mvp_mode_discrepancy: "ROADMAP Phase 4 carries '**Mode:** mvp' but its goal is not in User-Story form (user-story.validate -> valid:false). Verified goal-backward against the explicit phase goal + 5 roadmap success criteria; the User Flow Coverage section below uses the user story written in 04-01-PLAN.md <objective>. Run /gsd-mvp-phase 04 only if a formal User-Story goal is wanted on the roadmap — no code gap."
 unverified_prohibitions: 16  # all judgment-tier; LLM-judge verdict recorded per item below (non-authoritative) — human review recommended
 human_verification:
+
   - test: "Host live check (roadmap SC1). Prerequisite: ~/.claude/statusline.sh is currently a content-identical REGULAR-FILE COPY of kit/files/home/.claude/statusline.sh (mtime Aug 23 02:59 +0300, not a symlink). Re-run the README install line (ln -sf <repo>/kit/files/home/.claude/statusline.sh ~/.claude/statusline.sh) so future repo changes propagate, then start `claude` in this repo, send one short message and look at line 2."
     expected: "Line 2 ends with `· Fable NN%/1w (Nd:Nh:Nm)` — dim `Fable`, number green/yellow/red by threshold, `/1w` and countdown plain — and keeps rendering instantly on later messages (one fetch per 5 minutes, cached 0600 at ~/.claude/statusline-usage-cache.json). ~/.claude/settings.json statusLine stays {\"type\":\"command\",\"command\":\"~/.claude/statusline.sh\",\"padding\":0,\"refreshInterval\":60}. Also confirm YOU made the 02:59 copy of statusline.sh (if not, an agent breached D-46 — report it)."
     why_human: "Live Keychain token + production endpoint + TUI rendering cannot be exercised from the verifier (network to api.anthropic.com blocked in the agent sandbox; the verifier must never read the Keychain). Automated evidence already in hand: file:// renders, harness 220/0, host cache present -rw------- 58 bytes with pct and resets_at non-null (a successful live fetch happened on this host)."
+
   - test: "Sandbox live check (roadmap SC2). With Docker Desktop running: `sbx run --name statusline-kit-test` (left running by tests/sandbox.sh; recreate with `sbx run claude . --kit \"$PWD/kit\"` if gone), accept any trust prompt, send one short message."
     expected: "Same two-line status line with `· Fable NN%/1w (…)` last on line 2 (the sandbox has its own /home/agent/.claude/.credentials.json — observed present by tests/sandbox.sh §5.13, which rendered `· Fable 90%/1w (1d:18h:32m)` in 1 s); if the sandbox has no credentials, line 2 renders normally without the segment."
     why_human: "Visual confirmation inside a live Claude Code TUI in a Docker Sandbox; the verifier was instructed not to start/stop sandboxes or re-run tests/sandbox.sh. Machine evidence already on disk: tests/out/sandbox/EVIDENCE.txt (12 checks, 0 failures; harness in sandbox 220/0; PORT-01 8/8 byte-identical)."
+
   - test: "Judgment-tier prohibitions (16 across plans 01-04) — review the LLM-judge table in the report (all judged HOLD with code evidence: no credential write path, no -H/--header, no background/&/sleep/retry, no proxy value, no token in fixtures/docs, docs-only commits for 04-04, sandbox probe is presence-only)."
     expected: "Human agrees each prohibition holds; otherwise flag the item for a follow-up."
     why_human: "verification: judgment items cannot be closed by a test; the verifier records a non-authoritative verdict and hands the decision to the human (ADR-550 D4)."
