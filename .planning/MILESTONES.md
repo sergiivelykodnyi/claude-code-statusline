@@ -1,0 +1,27 @@
+# Milestones
+
+## v1.0 MVP (Shipped: 2026-08-23)
+
+**Phases completed:** 4 phases, 13 plans, 29 tasks (+1 quick task)
+**Delivered:** A self-contained bash-3.2 `statusline.sh` that renders a two-line, colorized Claude Code status (model/effort/dir + git on line 1; context, 5h, 1w and Fable weekly limits with countdowns on line 2), installed by `ln -sf` on macOS and by the `kit/` sbx mixin kit in Docker Sandboxes, with byte-identical renders in both.
+**Git range:** 8c22882 → 9a4b593 (108 commits, 2026-08-21 → 2026-08-23, 3 days)
+**Code:** `kit/files/home/.claude/statusline.sh` 432 lines · `tests/` 1,447 lines (run.sh 220 hermetic checks, sandbox.sh 12 live checks, render-fixtures.sh, probe-kit-add.sh) · `kit/spec.yaml`
+**Closeout:** verified_closeout — all 4 phases verified, 29/29 v1 requirements complete, open-artifact audit clear (0 newly acknowledged, 0 carried forward)
+**Archive:** `milestones/v1.0-ROADMAP.md`, `milestones/v1.0-REQUIREMENTS.md`, `milestones/v1.0-phases/`, `milestones/v1.0-quick/`
+
+**Key accomplishments:**
+
+- Walking-skeleton statusline.sh renders the full happy path — suffix-stripped model, effort, dir on line 1; context, 5h and 1w rate-limit segments with countdowns and threshold colors on line 2 — from one jq @sh pass under bash 3.2.
+- Six edge-state fixtures plus a 66-check tests/run.sh harness prove the never-fail contract — every absent/null/zero/malformed input renders exactly per the matrix with exit 0 and silent stderr, and statusline.sh needed zero changes to pass.
+- tests/run.sh grew from 67 to 82 checks: seven git states proven by exact line equality against hermetic temp repos, D-17..D-20 colors byte-pinned, and a portable 10-renders-in-2s latency budget — all green at 1s measured
+- jq `numbers` type guard on all 7 numeric stdin fields severs the resets_at -> `$(( ))` command-injection path on bash 3.2.57, and the harness now probes every arithmetic-reachable field under /bin/bash (82 -> 95 checks).
+- All 10 stdin fields are now type-guarded inside the single jq `@sh` program — `strings` on MODEL/EFFORT/DIR (closing the array-vector RCE CR-02) and a `uint` canonicalizer on the 7 numeric fields (closing the WR-03 float/exponent stderr leak) — locked in by 30 new harness probes (95 -> 125 checks) that provably fail against the pre-fix script.
+- statusline.sh relocated unchanged into a validated sbx mixin kit (`kit/spec.yaml` with an idempotent root-side jq `statusLine` merge), the 126-check harness re-pointed with a proven exec-bit check, and `tests/render-fixtures.sh` producing byte-for-byte install-path evidence (installed == repo PASS on the host).
+- 97-line README with the host `ln -sf` one-liner into the kit path, the safe `rm -f && cp` variant with overwrite warning, the D-34 `statusLine` snippet (`padding` 0, `refreshInterval` 60), a mock-input verify command proven true against the shipped script, and the Docker Sandboxes kit install both local (`--kit` / `sbx kit add`) and remote (`git+https…#dir=kit`); ARCHITECTURE.md and PROJECT.md no longer claim sandboxes share `~/.claude`.
+- `tests/sandbox.sh` creates a Docker Sandbox from this repo with `--kit "$PWD/kit"` and proves, with 11 named checks and 0 failures, that the kit-delivered `/home/agent/.claude/statusline.sh` is executable and byte-identical to the repo file, that the D-34 `statusLine` object is merged into `/home/agent/.claude/settings.json` after first start and survives stop/start, that the 126-check harness passes inside the sandbox, and that all 7 fixture renders are byte-identical host vs sandbox; the `sbx kit add` probe answered FAIL (sbx 0.39 refuses kits with `setup.startup`), so the README now documents `sbx rm` + recreate.
+- Fable weekly segment via the OAuth usage endpoint behind a 0600 TTL cache with fail-silent hide, stdin-first source folded into the single jq pass, proven end-to-end on the host with a file:// fixture and live against the production endpoint (`Fable 85%/1w (1d:20h:25m)`).
+- tests/run.sh grows from 126 to 220 hermetic checks: a 17-row iso_to_epoch table, a fable_render helper, every functional branch of the Fable adapter rendered from file:// fixtures (cold/warm/grace/negative/credentials/kill-switch/stdin-first/peer/timeout/colour), and hostile stdin/cache/endpoint probes under /bin/bash 3.2.57 — each family shown to FAIL against eight deliberately mutated script copies and PASS against the real one.
+- `tests/sandbox.sh` §5.13 now probes the kit sandbox for `/home/agent/.claude/.credentials.json` (presence only) and renders `tests/fixtures/full.json` through the kit-delivered script with the Fable path live; the fresh-sandbox run recorded `12 checks, 0 failures` — credentials PRESENT, `· Fable 90%/1w (1d:18h:32m)` rendered inside the sandbox in 1 s from the sandbox's own proxy-scoped token, the 220-check harness green under the sandbox toolchain, 8/8 fixtures byte-identical host vs sandbox, cache `-rw-------` owned by `agent`; the kit's D-33 guard now also covers curl; the host `~/.claude` was not touched.
+- README now shows and explains the separate last `Fable NN%/1w (countdown)` segment (token sources, 5 min / 2 s / 0600 cache with 1 h grace, `STATUSLINE_NO_FABLE` kill switch, Keychain prompt, sandbox credentials branch, curl requirement), and REQUIREMENTS/PROJECT/ROADMAP all describe the D-51 layout with a recorded layout-correction note — scoped edits only, harness still 220/0.
+
+---
