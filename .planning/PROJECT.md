@@ -56,10 +56,11 @@ Segment definitions:
 - ✓ Frame prefixes `╭─ `/`╰─ ` removed; both lines render bare (layout correction) — Phase 2
 - ✓ Script works on macOS host and inside Docker Sandboxes — Phase 3 (126-check harness green in both; 7 fixture renders byte-identical host vs sandbox; live `claude` eyeball in both environments passed UAT)
 - ✓ README briefly describes what the status line shows and the symlink command that installs `statusline.sh` into `~/.claude` — Phase 3 (plus the `settings.json` snippet with `refreshInterval 60` and the Docker Sandboxes kit route)
+- ✓ Line 2 additionally renders the Fable 5 weekly percent and reset countdown as a separate `Fable pct/1w (countdown)` segment, last on line 2 — Phase 4 (OAuth usage endpoint behind a 5-min 0600 cache with 1 h grace, fail-silent hide; harness 126 → 220 checks green on host and in the kit sandbox; live sandbox evidence `12 checks, 0 failures`; UAT 3/3 in both environments)
 
 ### Active
 
-- [ ] Line 2 additionally renders the Fable 5 weekly percent and reset countdown as a separate `Fable pct/1w (countdown)` segment, last on line 2
+- (none — all v1 requirements validated; next work starts with a new milestone)
 
 ### Out of Scope
 
@@ -100,6 +101,10 @@ Segment definitions:
 | Sandbox `statusLine` wiring = root `setup.startup` idempotent jq merge of only `.statusLine` after the platform seed (`themeId` wait, atomic tmp+mv, chmod 0755, non-recursive chown) | The engine seeds `settings.json` late at create time and would overwrite an install-time merge; startup reconcile survives both create and restart | ✓ Merge present after first start and survives stop/start (restart probe canary kept); every other key preserved (Phase 3) |
 | Existing sandboxes: `sbx rm` + recreate with `--kit`, not `sbx kit add` | sbx v0.39.0 refuses `kit add` for kits declaring `setup.startup` (observed; "does not yet apply") | ✓ README documents recreate; `tests/sandbox.sh` re-probes kit-add on every run so the sentence can flip when sbx supports it (Phase 3) |
 | Cross-environment evidence = raw fixture renders dumped under gitignored `tests/out/<env>/` and compared with POSIX `diff -r` | Byte-for-byte proof of PORT-01 without screenshots or human eyeballing | ✓ `diff -r` empty for all 7 fixtures host vs sandbox (Phase 3) |
+| Fable usage is a separate last line-2 peer segment `Fable NN%/1w (countdown)` (D-51), not `f(pct)` inside the weekly segment | The Fable bucket has its own reset time; a peer segment keeps every other segment byte-identical and the layout readable | ✓ Shipped; REQUIREMENTS/PROJECT/ROADMAP/README reconciled in 04-04 (Phase 4) |
+| Fable source order: stdin `rate_limits.model_scoped` (empty today) → 300 s TTL cache → `GET /api/oauth/usage` via `curl -K -` with a read-only token (credentials file → Keychain, `expiresAt` pre-check) → 3600 s grace → hidden | Never block or blank the line; Claude Code owns token refresh; stdin wins the moment the binary projects the bucket | ✓ Live renders on host and in the kit sandbox (`Fable 90%/1w (1d:18h:32m)` in 1 s); every failure branch hides with exit 0 / 0 stderr (Phase 4) |
+| Shared per-user cache `~/.claude/statusline-usage-cache.json`, 0600 via `mktemp`+`mv -f`, negative results cached; `STATUSLINE_NO_FABLE` kill switch exported by the harness and dumper | Hermetic tests (no Keychain, no network, no `~/.claude` writes) and a cache that is safe under concurrent renders | ✓ Harness 220/0 hermetic; D-46 before/after identical through the live sandbox run (Phase 4) |
+| Live sandbox evidence is re-runnable (`tests/sandbox.sh` §5.13, presence-only credentials probe) and gated on a human Docker Desktop action — never faked | Evidence must come from a real sandboxd; the token is never read or printed by the probe | ✓ `tests/out/sandbox/EVIDENCE.txt` 12/0, harness-in-sandbox 220/0, PORT-01 8/8 byte-identical (Phase 4) |
 
 ## Evolution
 
@@ -119,4 +124,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-08-22 after Phase 3*
+*Last updated: 2026-08-23 after Phase 4*

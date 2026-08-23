@@ -1,44 +1,43 @@
 ---
 gsd_state_version: 1.0
 current_phase: 04
-current_phase_name: Fable Weekly f() Segment
-status: executing
-stopped_at: Completed 04-03-PLAN.md
-last_updated: "2026-08-22T23:58:33.630Z"
+status: completed
+stopped_at: Phase 04 complete — all phases complete
+last_updated: "2026-08-23T00:37:19.043Z"
 last_activity: 2026-08-23
-last_activity_desc: Phase 04 execution started
-state_head: 87609aee5f971128173f78a1297f99c909bfd26a
+last_activity_desc: Phase 04 complete
+state_head: 502a62b64a2bb208af2b04f91a5a3ec2da4a974b
 progress:
   total_phases: 4
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 13
   completed_plans: 13
-  percent: 75
+  percent: 100
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-08-22)
+See: .planning/PROJECT.md (updated 2026-08-23)
 
 **Core value:** One glance at the terminal tells you everything about the session: which model at which effort, where you are in git, and how much context and rate limit you have left before things reset.
-**Current focus:** Phase 04 — Fable Weekly f() Segment
+**Current focus:** Milestone v1 complete (4/4 phases) — next: `/gsd-complete-milestone`
 
 ## Current Position
 
-Phase: 04 (Fable Weekly f() Segment) — EXECUTING
-Plan: 2 of 4
-Status: Ready to execute
-Last activity: 2026-08-23 — Phase 04 execution started
+Phase: 04
+Plan: Not started
+Status: All phases complete
+Last activity: 2026-08-23 — Phase 04 complete
 
-Progress: [████████████████████] 9/9 plans ([████████░░] 75%) — Phase 3 of 4 complete (75%)
+Progress: [████████████████████] 13/13 plans (100%) — Phase 4 of 4 complete (100%)
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 9
+- Total plans completed: 13
 - Average duration: -
 - Total execution time: -
 
@@ -49,6 +48,7 @@ Progress: [████████████████████] 9/9 pla
 | 01 | 2 | - | - |
 | 02 | 4 | - | - |
 | 03 | 3 | - | - |
+| 04 | 4 | - | - |
 
 **Recent Trend:**
 
@@ -92,6 +92,7 @@ Recent decisions affecting current work:
 - [Phase 04]: Shared per-user cache ~/.claude/statusline-usage-cache.json, 0600 via mktemp+mv -f, negative results cached; STATUSLINE_NO_FABLE kill switch exported in tests/run.sh and tests/render-fixtures.sh keeps the harness hermetic
 - [Phase 04]: stdin array on model_scoped[0].resets_at asserted as 'Fable 33%/1w' without parens (pct kept, D-54) rather than hidden — the guard empties only the reset
 - [Phase 04]: Exported kill switch is load-bearing for harness hermeticity: M1 bite run showed the fixture loop going live (Keychain + endpoint) without it; nothing written under ~/.claude
+- [Phase 04 close]: Phase verified (29/32 + UAT 3/3 in both environments), security verified (21 threats, 0 blocking open), code review 0 critical / 4 warnings advisory; milestone v1 ready to archive
 - [Phase 04]: project-brief.md left untouched as the historical brief; the Phase 4 layout correction is recorded in PROJECT.md (blockquote note) and ROADMAP criterion 5 (04-04)
 - [Phase 04]: README names only the two read-only token sources and the kill switch; numbers copied from the script header Env inputs block (04-04)
 - [Phase 04]: Sandbox credentials branch observed PRESENT (proxy-scoped token via the global sbx anthropic secret) — the Fable segment renders live inside the kit sandbox with no kit change; README's Docker sentence already covers this branch
@@ -103,7 +104,7 @@ None yet.
 
 ### Blockers/Concerns
 
-- [Phase 4]: OAuth usage endpoint is undocumented and reported unstable — confirm window key naming and `utilization` scale (0-1 vs 0-100) during phase planning
+- [Phase 4 → resolved]: OAuth usage endpoint shape verified live (`limits[]` `weekly_scoped` Fable entry, `percent` 0-100 int, ISO `resets_at`); the adapter hides on any shape change, and 04-REVIEW.md WR-01..04 (no failure backoff, `curl -q`, token guard, §5.13 assert) are tracked as non-blocking follow-ups in 04-SECURITY.md T-04-19/20 — candidates for the next milestone
 - [sbx bump]: `sbx kit add` on v0.39.0 refuses any kit that ships `files/` (and any with `setup.startup`) — no kit shape can deliver statusline.sh via kit add today; re-run `tests/probe-kit-add.sh` on the next sbx release (install-only merge already proven to survive the create-time seed)
 
 ### Quick Tasks Completed
@@ -126,6 +127,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-08-22T23:58:22.990Z
-Stopped at: Completed 04-03-PLAN.md
+Last session: 2026-08-23T00:37:40Z
+Stopped at: Phase 04 complete — milestone v1 (4/4 phases) ready for /gsd-complete-milestone
 Resume file: None
