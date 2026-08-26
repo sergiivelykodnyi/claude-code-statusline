@@ -330,7 +330,7 @@ git_line1() {
   printf '%s\n' "$GR_OUT" | strip_ansi | sed -n 1p
 }
 
-# 8.1 not-a-repo: segment and its joiner space entirely absent (GIT-01).
+# 8.1 not-a-repo: segment and its dot joiner entirely absent (GIT-01).
 mkdir "$TESTTMP/plaindir"
 git_render "$TESTTMP/plaindir"
 l1=$(printf '%s\n' "$GR_OUT" | strip_ansi | sed -n 1p)
@@ -350,7 +350,7 @@ tgit -C "$W" push -q -u origin main 2>/dev/null
 
 # clean in-sync: no dirty star, no counter tokens at zero (GIT-04/GIT-05
 # boundary low side, D-27).
-check_eq "git clean in-sync: line 1" "Opus 5 (high) · w ⎇ main ≡" "$(git_line1 "$W")"
+check_eq "git clean in-sync: line 1" "Opus 5 (high) · w · main ≡" "$(git_line1 "$W")"
 
 # boundary ones: exactly one behind / one ahead / one stash all render
 # (GIT-04/GIT-05 boundary high side, D-27).
@@ -363,7 +363,7 @@ tgit -C "$W" fetch -q origin
 tgit -C "$W" commit -q --allow-empty -m l1
 echo two > "$W/f"
 tgit -C "$W" stash push -q
-check_eq "git boundary ones: line 1" "Opus 5 (high) · w ⎇ main ≡ ↓1 ↑1 #1" "$(git_line1 "$W")"
+check_eq "git boundary ones: line 1" "Opus 5 (high) · w · main ≡ ↓1 ↑1 #1" "$(git_line1 "$W")"
 
 # full form: behind 2, ahead 3, 2 stashes, untracked file -> dirty star
 # (roadmap criterion 1).
@@ -378,7 +378,7 @@ touch "$W/untracked"
 git_render "$W"
 FULL_RAW=$GR_OUT
 l1=$(printf '%s\n' "$FULL_RAW" | strip_ansi | sed -n 1p)
-check_eq "git full form: line 1" "Opus 5 (high) · w ⎇ main* ≡ ↓2 ↑3 #2" "$l1"
+check_eq "git full form: line 1" "Opus 5 (high) · w · main* ≡ ↓2 ↑3 #2" "$l1"
 check_eq "git full form: exit code" "0" "$GR_RC"
 check_eq "git full form: stderr bytes" "0" "$GR_ERRBYTES"
 
@@ -393,7 +393,7 @@ git_render "$NB"
 NOUP_RAW=$GR_OUT
 l1=$(printf '%s\n' "$NOUP_RAW" | strip_ansi | sed -n 1p)
 check_eq "git no-upstream verbatim branch: line 1" \
-  "Opus 5 (high) · noup ⎇ feature/x-1 ≢" "$l1"
+  "Opus 5 (high) · noup · feature/x-1 ≢" "$l1"
 
 # 8.4 detached HEAD: short SHA label, sync symbol hidden entirely
 # (D-24/D-25 — exact equality proves no glyph and no star).
@@ -402,19 +402,19 @@ echo a > "$DT/f"; tgit -C "$DT" add f; tgit -C "$DT" commit -q -m c1
 echo b > "$DT/f"; tgit -C "$DT" add f; tgit -C "$DT" commit -q -m c2
 tgit -C "$DT" checkout -q --detach HEAD~1
 DSHA=$(tgit -C "$DT" rev-parse --short HEAD)
-check_eq "git detached: line 1" "Opus 5 (high) · det ⎇ $DSHA" "$(git_line1 "$DT")"
+check_eq "git detached: line 1" "Opus 5 (high) · det · $DSHA" "$(git_line1 "$DT")"
 
 # 8.5 unborn branch (no commits) with one untracked file (D-26).
 UB=$(mk_repo unborn)
 touch "$UB/f"
-check_eq "git unborn: line 1" "Opus 5 (high) · unborn ⎇ main* ≢" "$(git_line1 "$UB")"
+check_eq "git unborn: line 1" "Opus 5 (high) · unborn · main* ≢" "$(git_line1 "$UB")"
 
 # 8.6 marker color bytes (D-17..D-20) — must match seg_git's composition
-# exactly: magenta branch span incl. glyph, yellow star, green has-upstream
+# exactly: dim dot joiner, magenta branch span, yellow star, green has-upstream
 # glyph, whole-token yellow behind / green ahead / dim stash.
-want="${ESC}[35m⎇ main${ESC}[0m${ESC}[33m*${ESC}[0m ${ESC}[32m≡${ESC}[0m ${ESC}[33m↓2${ESC}[0m ${ESC}[32m↑3${ESC}[0m ${ESC}[2m#2${ESC}[0m"
+want="${ESC}[34mw${ESC}[0m ${ESC}[2m·${ESC}[0m ${ESC}[35mmain${ESC}[0m${ESC}[33m*${ESC}[0m ${ESC}[32m≡${ESC}[0m ${ESC}[33m↓2${ESC}[0m ${ESC}[32m↑3${ESC}[0m ${ESC}[2m#2${ESC}[0m"
 case "$FULL_RAW" in *"$want"*) r=0;; *) r=1;; esac
-check_ok "git color bytes: magenta branch, yellow *, green ≡, yellow ↓2, green ↑3, dim #2" $r
+check_ok "git color bytes: dim · joiner, magenta branch, yellow *, green ≡, yellow ↓2, green ↑3, dim #2" $r
 
 # red no-upstream glyph — the user's explicit choice (D-19).
 want="${ESC}[31m≢${ESC}[0m"
