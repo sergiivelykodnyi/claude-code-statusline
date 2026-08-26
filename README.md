@@ -5,7 +5,7 @@ A two-line bash status line for Claude Code: model and effort, directory, git st
 ## What it shows
 
 ```text
-Opus 5 (high) · myproject ⎇ main* ≡ ↓2 ↑3 #2
+Opus 5 (high) · myproject · main* ≡ ↓2 ↑3 #2
 10%/100k/1M · 50%/5h (2h:50m) · 15%/1w (3d:5h:57m) · Fable 74%/1w (2d:4h:30m)
 ```
 
@@ -17,7 +17,7 @@ Percentages turn yellow at 70% and red at 90%; segments with no data (no git rep
 |-------|---------|
 | `Opus 5 (high)` | Model name (suffixes like `(1M context)` stripped) and reasoning effort — effort hidden when the model has none |
 | `myproject` | Basename of the working directory |
-| `⎇ main` | Current branch (short SHA when detached) — the whole git segment is hidden outside a repo |
+| `main` | Current branch (short SHA when detached) — the whole git segment is hidden outside a repo |
 | `*` | Working tree has changes or untracked files |
 | `≡` / `≢` | Branch has / has no upstream |
 | `↓2` | Commits behind upstream (hidden at 0; from the last fetch — the script never fetches) |
