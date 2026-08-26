@@ -136,7 +136,7 @@ seg_dir() {
   printf '%s' "${BLUE}${d}${RESET}"
 }
 
-# Git segment: magenta "⎇ branch", yellow dirty star, green/red sync symbol,
+# Git segment: magenta branch label, yellow dirty star, green/red sync symbol,
 # yellow behind / green ahead counts, dim stash count — hidden entirely
 # outside a repo (GIT-01..05, D-17..D-20, D-24..D-27). One primary status
 # call parsed below, plus one stash count; all read-only and lock-free via
@@ -170,7 +170,7 @@ seg_git() {
   fi
   stash=$(GIT_OPTIONAL_LOCKS=0 git -C "$DIR" rev-list --walk-reflogs --count refs/stash 2>/dev/null)
   [ -z "$stash" ] && stash=0                  # no stash ref -> 0
-  out="${MAGENTA}⎇ ${label}${RESET}"
+  out="${MAGENTA}${label}${RESET}"
   [ "$dirty" -eq 1 ] && out="${out}${YELLOW}*${RESET}"
   if [ "$detached" -eq 0 ]; then              # D-25: no sync symbol when detached
     if [ "$upstream" -eq 1 ]; then out="${out} ${GREEN}≡${RESET}"
@@ -407,10 +407,9 @@ main() {
   model_seg=$(seg_model_effort)
   dir_seg=$(seg_dir)
   git_seg=$(seg_git)
-  # Phase 2: the git segment is attached to the directory with a plain
-  # space; empty outside a repo, so no trailing space leaks (GIT-01).
-  dir_seg="$dir_seg${git_seg:+ $git_seg}"
-  body=$(join_segments "$sep" "$model_seg" "$dir_seg")
+  # Git is a first-class line-1 segment joined by the dim dot; join_segments
+  # skips it when empty, so outside a repo no separator leaks (GIT-01/D-14).
+  body=$(join_segments "$sep" "$model_seg" "$dir_seg" "$git_seg")
   LINE1="${body}${RESET}"
 
   body=$(join_segments "$sep" "$(seg_context)" "$(seg_5h)" "$(seg_1w)" "$(seg_fable)")  # Fable last (D-51)
