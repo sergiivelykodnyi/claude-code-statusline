@@ -11,14 +11,14 @@ One glance at the terminal tells you everything about the session: which model a
 ## Target Layout
 
 ```text
-model_name (effort) · current_dir_name ⎇ current_git_branch branch_status ahead behind stash
+model_name (effort) · current_dir_name · current_git_branch branch_status ahead behind stash
 context_usage_pct/context_usage_tokens/window_size · usage_pct/5h (when_reset) · usage_pct/1w (when_reset) · Fable fable_pct/1w (fable_reset)
 ```
 
 Whole example:
 
 ```text
-Opus 5 (high) · myproject ⎇ main* ≡ ↓2 ↑3 #2
+Opus 5 (high) · myproject · main* ≡ ↓2 ↑3 #2
 10%/100k/1M · 50%/5h (2h:50m) · 15%/1w (3d:5h:57m) · Fable 74%/1w (2d:4h:30m)
 ```
 
@@ -31,7 +31,7 @@ Segment definitions:
 - `model_name` — model display name with any `(1M context)` suffix stripped (e.g. `Opus 5`, not `Opus 5 (1M context)`)
 - `(effort)` — current reasoning effort, e.g. `(high)`
 - `current_dir_name` — basename of the directory Claude is running in
-- `⎇ branch` — current git branch, only when inside a git repo
+- `branch` — current git branch, rendered as its own segment, only when inside a git repo
 - `branch_status` — `*` appended to branch name when there are changes or untracked files; `≡` when the branch is pushed to a remote, `≢` when it has no upstream
 - `↓N` — commits on the remote not yet pulled (incoming)
 - `↑N` — local commits not yet pushed (outgoing)
@@ -52,7 +52,7 @@ Segment definitions:
 - ✓ Stdin-derived segments with no data are hidden entirely, and the script never fails (exit 0, zero stderr, line 1 always renders) — v1.0 (Phase 1)
 - ✓ Output is colorized with ANSI colors, thresholds shift green/yellow/red — v1.0 (Phase 1)
 - ✓ Line 1 renders git branch with dirty marker, remote-sync symbol, ahead/behind counts, and stash count when in a git repo — v1.0 (Phase 2)
-- ✓ Segments with no data are hidden entirely (no `⎇` outside git repos, no `#0`, no `↓0`/`↑0`) — v1.0 (Phase 2)
+- ✓ Segments with no data are hidden entirely (no git segment outside git repos, no `#0`, no `↓0`/`↑0`) — v1.0 (Phase 2)
 - ✓ Frame prefixes `╭─ `/`╰─ ` removed; both lines render bare (layout correction) — v1.0 (Phase 2)
 - ✓ Script works on macOS host and inside Docker Sandboxes — v1.0 (Phase 3) (126-check harness green in both; 7 fixture renders byte-identical host vs sandbox; live `claude` eyeball in both environments passed UAT)
 - ✓ README briefly describes what the status line shows and the symlink command that installs `statusline.sh` into `~/.claude` — v1.0 (Phase 3) (plus the `settings.json` snippet with `refreshInterval 60` and the Docker Sandboxes kit route)

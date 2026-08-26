@@ -106,7 +106,7 @@ A custom `statusline.sh` for Claude Code that renders a two-line, box-drawing st
 - any non-`#` line (`1 `, `2 `, `u `, `? `) → dirty ⇒ `*`
 - `GIT_OPTIONAL_LOCKS=0` — prevents the status run from taking index locks / writing the refreshed index; essential for a command that fires on every render while Claude itself runs git.
 - `git -C "$DIR"` with `$DIR` from `.workspace.current_dir` — don't trust the script's own cwd.
-- Detect not-a-repo by the status command failing (exit ≠ 0) and hide the whole `⎇` segment.
+- Detect not-a-repo by the status command failing (exit ≠ 0) and hide the whole git segment.
 - The official docs recommend caching git output to `/tmp/statusline-git-cache-$SESSION_ID` with a ~5 s TTL for large repos. For this project's repo sizes a cache is optional; adopt it only if render lag appears (keep as a known lever, not day-one complexity).
 
 ## What NOT to Use
