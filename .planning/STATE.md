@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-08-23)
 Phase: Milestone v1.0 complete
 Plan: —
 Status: Awaiting next milestone
-Last activity: 2026-08-23 — Milestone v1.0 completed and archived
+Last activity: 2026-08-26 - Completed quick task 260826-wid: change the branch symbol ⎇ to the dot separator " · " to make Git a separate segment
 
 ## Performance Metrics
 
@@ -91,8 +91,9 @@ Open, carried into the next milestone (none blocking):
 
 ### Quick Tasks Completed
 
-| # | Description | Date | Commit | Directory |
-|---|-------------|------|--------|-----------|
+| # | Description | Date | Commit | Status | Directory |
+|---|-------------|------|--------|--------|-----------|
+| 260826-wid | change the branch symbol ⎇ to the dot separator " · " to make Git a separate segment | 2026-08-26 | 1b8b1df | Needs Review | [260826-wid-change-the-branch-symbol-to-a-dot-separa](./quick/260826-wid-change-the-branch-symbol-to-a-dot-separa/) |
 
 ### Roadmap Evolution
 
