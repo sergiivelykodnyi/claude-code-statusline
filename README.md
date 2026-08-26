@@ -16,6 +16,7 @@ Percentages turn yellow at 70% and red at 90%; segments with no data (no git rep
 | Token | Meaning |
 |-------|---------|
 | `Opus 5 (high)` | Model name (suffixes like `(1M context)` stripped) and reasoning effort — effort hidden when the model has none |
+| `·` | Dim separator between segments — each segment is independent, so `myproject · main` is directory then branch |
 | `myproject` | Basename of the working directory |
 | `main` | Current branch (short SHA when detached) — the whole git segment is hidden outside a repo |
 | `*` | Working tree has changes or untracked files |
