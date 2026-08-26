@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-08-23)
 Phase: Milestone v1.0 complete
 Plan: —
 Status: Awaiting next milestone
-Last activity: 2026-08-26 - Completed quick task 260826-wid: change the branch symbol ⎇ to the dot separator " · " to make Git a separate segment
+Last activity: 2026-08-27 - Completed quick task 260827-02m: drop the branch glyph from the three live spec docs and add a separator row to the README legend
 
 ## Performance Metrics
 
@@ -94,6 +94,7 @@ Open, carried into the next milestone (none blocking):
 | # | Description | Date | Commit | Status | Directory |
 |---|-------------|------|--------|--------|-----------|
 | 260826-wid | change the branch symbol ⎇ to the dot separator " · " to make Git a separate segment | 2026-08-26 | 1b8b1df | Needs Review | [260826-wid-change-the-branch-symbol-to-a-dot-separa](./quick/260826-wid-change-the-branch-symbol-to-a-dot-separa/) |
+| 260827-02m | drop the branch glyph from the three live spec docs and add a separator row to the README legend | 2026-08-27 | a31c991 | — (not validated) | [260827-02m-drop-the-branch-glyph-from-the-three-liv](./quick/260827-02m-drop-the-branch-glyph-from-the-three-liv/) |
 
 ### Roadmap Evolution
 
