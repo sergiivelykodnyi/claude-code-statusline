@@ -140,13 +140,14 @@ seg_dir() {
 # label IS the detached marker, no sync glyph; D-24/D-25), yellow dirty star,
 # then ONE mutually exclusive sync token: green ≡ in-sync (upstream, ahead=
 # behind=0) / blue ↑N ahead-only / yellow ↓N behind-only / red ↓B ↑A when
-# diverged / red ≢ no-upstream (D-19); cyan stash count. Hidden entirely
+# diverged / red ≢ no-upstream or upstream gone (D-19); cyan stash count.
+# Hidden entirely
 # outside a repo (GIT-01..05, D-17..D-20, D-24..D-27). One primary status
 # call parsed below, plus one stash count; all read-only and lock-free via
 # GIT_OPTIONAL_LOCKS=0, uncached per D-29 (PORT-02).
 seg_git() {
   [ -n "$DIR" ] || return 0                   # stdin workspace dir only, never $PWD
-  local status line label upstream=0 detached=0 dirty=0 ahead=0 behind=0 ab stash sha out
+  local status line label upstream=0 has_ab=0 detached=0 dirty=0 ahead=0 behind=0 ab stash sha out
   status=$(GIT_OPTIONAL_LOCKS=0 git -C "$DIR" status --porcelain=v2 --branch 2>/dev/null) || return 0
   # bash-3.2-safe parse: here-string keeps the loop in this shell (a pipe
   # would fork a subshell and lose every variable set inside it).
@@ -154,7 +155,7 @@ seg_git() {
     case "$line" in
       '# branch.head '*)     label=${line#'# branch.head '} ;;
       '# branch.upstream '*) upstream=1 ;;
-      '# branch.ab '*)                        # "+A -B" -> ahead A, behind B
+      '# branch.ab '*) has_ab=1               # "+A -B" -> ahead A, behind B
         ab=${line#'# branch.ab '}
         ahead=${ab%% *};  ahead=${ahead#+}
         behind=${ab##* }; behind=${behind#-} ;;
@@ -176,8 +177,8 @@ seg_git() {
   out="${MAGENTA}${label}${RESET}"
   [ "$dirty" -eq 1 ] && out="${out}${YELLOW}*${RESET}"
   if [ "$detached" -eq 0 ]; then              # D-25: no sync token when detached (SHA label is the marker)
-    if [ "$upstream" -eq 0 ]; then            # no upstream — red is the user's explicit choice (D-19)
-      out="${out} ${RED}≢${RESET}"
+    if [ "$upstream" -eq 0 ] || [ "$has_ab" -eq 0 ]; then  # no upstream, or upstream gone
+      out="${out} ${RED}≢${RESET}"            # (upstream set but no branch.ab line) — red per D-19
     elif [ "$behind" -gt 0 ] && [ "$ahead" -gt 0 ]; then
       out="${out} ${RED}↓${behind}${RESET} ${RED}↑${ahead}${RESET}"  # diverged: both red, per-token spans
     elif [ "$behind" -gt 0 ]; then

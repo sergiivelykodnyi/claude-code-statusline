@@ -417,6 +417,24 @@ l1=$(printf '%s\n' "$NOUP_RAW" | strip_ansi | sed -n 1p)
 check_eq "git no-upstream verbatim branch: line 1" \
   "Opus 5 (high) · noup · feature/x-1 ≢" "$l1"
 
+# 8.3b upstream gone: branch.upstream is configured but its remote-tracking
+# ref is missing (pruned remote branch), so porcelain v2 emits no branch.ab
+# line — must render red ≢, never a false green ≡ (WR-01).
+GN=$(mk_repo gone)
+echo g > "$GN/f"
+tgit -C "$GN" add f
+tgit -C "$GN" commit -q -m c1
+tgit -C "$GN" remote add origin "$TESTTMP/remote.git"
+tgit -C "$GN" config branch.main.remote origin
+tgit -C "$GN" config branch.main.merge refs/heads/main
+git_render "$GN"
+GONE_RAW=$GR_OUT
+l1=$(printf '%s\n' "$GONE_RAW" | strip_ansi | sed -n 1p)
+check_eq "git upstream-gone: line 1" "Opus 5 (high) · gone · main ≢" "$l1"
+want="${ESC}[31m≢${ESC}[0m"
+case "$GONE_RAW" in *"$want"*) r=0;; *) r=1;; esac
+check_ok "git color bytes: red ≢ on upstream-gone (WR-01)" $r
+
 # 8.4 detached HEAD: short SHA label, sync symbol hidden entirely
 # (D-24/D-25 — exact equality proves no glyph and no star).
 DT=$(mk_repo det)
