@@ -5,7 +5,7 @@
 I want to create a custom `statusline.sh` that I can use on my current machine (host) and inside my [Docker Sandboxes](https://docs.docker.com/ai/sandboxes/). What I want to have
 
 ```text
-Row 1: model_name (effort) · current_dir_name · current_git_branch branch_status ahead behind stash
+Row 1: model_name (effort) · current_dir_name · current_git_branch branch_status behind ahead stash
 
 Row 2: context_usage_in_percentage/context_usage_in_tokens/window_size · usage_in_percentage/5h (when_reset) · usage_in_percentage/1w f(usage_in_percentage) (when_reset)
 ```
@@ -15,8 +15,8 @@ Row 2: context_usage_in_percentage/context_usage_in_tokens/window_size · usage_
 - `current_dir_name` - the directory where Claude is running, e.g. `myproject`
 - `current_git_branch` - if the folder is a git repository, it should show the current branch name as its own segment after the directory, e.g. `myproject · main`
 - `branch_status` - if the branch has changes or untracked files, we should add asterisks next to it. The sync state is one mutually exclusive token: green `≡` when in sync with the upstream (ahead=behind=0), red `≢` when there is no upstream, otherwise the arrow counts replace the glyph, e.g. `main* ≡` or `main* ↓2 ↑3`
-- `ahead` - how many commits are ahead in remote, e.g. `↓2` — yellow when behind only, red when also ahead (diverged)
-- `behind` - how many commits are not pushed to remote, e.g. `↑3` — blue when ahead only, red when also behind (diverged)
+- `behind` - commits on the remote not yet pulled, e.g. `↓2` — yellow when behind only, red when also ahead (diverged)
+- `ahead` - local commits not yet pushed, e.g. `↑3` — blue when ahead only, red when also behind (diverged)
 - `stash` - number of current stashes, e.g. `#2`, in cyan
 - `context_usage_in_percentage` - how much of the context from the context window is used in %, e.g. `10%`
 - `context_usage_in_tokens` - how much of the context from the context window is used in shortened numbers, e.g. `100k`
