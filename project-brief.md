@@ -14,10 +14,10 @@ Row 2: context_usage_in_percentage/context_usage_in_tokens/window_size · usage_
 - `effort` - current effort, e.g. `(high)`
 - `current_dir_name` - the directory where Claude is running, e.g. `myproject`
 - `current_git_branch` - if the folder is a git repository, it should show the current branch name as its own segment after the directory, e.g. `myproject · main`
-- `branch_status` - if the branch has changes or untracked files, we should add asterisks next to it. If the branch is pushed to remote, then `≡`; if not, `≢`, e.g. `main* ≡`
-- `ahead` - how many commits are ahead in remote, e.g. `↓2`
-- `behind` - how many commits are not pushed to remote, e.g. `↑3`
-- `stash` - number of current stashes, e.g. `#2`
+- `branch_status` - if the branch has changes or untracked files, we should add asterisks next to it. The sync state is one mutually exclusive token: green `≡` when in sync with the upstream (ahead=behind=0), red `≢` when there is no upstream, otherwise the arrow counts replace the glyph, e.g. `main* ≡` or `main* ↓2 ↑3`
+- `ahead` - how many commits are ahead in remote, e.g. `↓2` — yellow when behind only, red when also ahead (diverged)
+- `behind` - how many commits are not pushed to remote, e.g. `↑3` — blue when ahead only, red when also behind (diverged)
+- `stash` - number of current stashes, e.g. `#2`, in cyan
 - `context_usage_in_percentage` - how much of the context from the context window is used in %, e.g. `10%`
 - `context_usage_in_tokens` - how much of the context from the context window is used in shortened numbers, e.g. `100k`
 - `window_size` - context window size in shortened numbers, e.g. `1m`
@@ -27,7 +27,7 @@ Row 2: context_usage_in_percentage/context_usage_in_tokens/window_size · usage_
 Whole example
 
 ```text
-Opus 5 (high) · myproject · main* ≡ ↓2 ↑3 #2
+Opus 5 (high) · myproject · main* ↓2 ↑3 #2
 10%/100k/1M · 50%/1w (2h:50m) · 15%/1w f(60%) (3d:5h:57m)
 ```
 

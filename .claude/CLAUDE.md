@@ -101,7 +101,7 @@ A custom `statusline.sh` for Claude Code that renders a two-line, box-drawing st
 ## Fast git queries (prescriptive)
 
 - `# branch.head <name>` → branch (`(detached)` when detached)
-- `# branch.upstream <ref>` → present ⇒ `≡` (has upstream), absent ⇒ `≢`
+- `# branch.upstream <ref>` → absent ⇒ `≢`; present ⇒ `≡` only when ahead=behind=0 (in sync) — the `↓`/`↑` arrows replace the glyph otherwise (the sync token is mutually exclusive)
 - `# branch.ab +A -B` → A = ahead (`↑`), B = behind (`↓`)
 - any non-`#` line (`1 `, `2 `, `u `, `? `) → dirty ⇒ `*`
 - `GIT_OPTIONAL_LOCKS=0` — prevents the status run from taking index locks / writing the refreshed index; essential for a command that fires on every render while Claude itself runs git.

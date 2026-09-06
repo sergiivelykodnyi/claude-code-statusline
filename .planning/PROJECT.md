@@ -18,7 +18,7 @@ context_usage_pct/context_usage_tokens/window_size · usage_pct/5h (when_reset) 
 Whole example:
 
 ```text
-Opus 5 (high) · myproject · main* ≡ ↓2 ↑3 #2
+Opus 5 (high) · myproject · main* ↓2 ↑3 #2
 10%/100k/1M · 50%/5h (2h:50m) · 15%/1w (3d:5h:57m) · Fable 74%/1w (2d:4h:30m)
 ```
 
@@ -32,7 +32,7 @@ Segment definitions:
 - `(effort)` — current reasoning effort, e.g. `(high)`
 - `current_dir_name` — basename of the directory Claude is running in
 - `branch` — current git branch, rendered as its own segment, only when inside a git repo
-- `branch_status` — `*` appended to branch name when there are changes or untracked files; `≡` when the branch is pushed to a remote, `≢` when it has no upstream
+- `branch_status` — `*` appended to branch name when there are changes or untracked files; the sync state is one mutually exclusive token: `≡` means in sync (upstream present AND ahead=behind=0), `≢` means no upstream, and the `↓N`/`↑N` arrows replace the glyph otherwise (detached: the magenta short-SHA label is the marker, no token)
 - `↓N` — commits on the remote not yet pulled (incoming)
 - `↑N` — local commits not yet pushed (outgoing)
 - `#N` — number of stashes
@@ -112,7 +112,7 @@ Not yet defined — run `/gsd-new-milestone`. The Active list above holds the ca
 | Threshold color spans `NN%` only, reset before labels | Resolved plan action-text/verify contradiction in favor of the binding verify | ✓ Applied identically at all three percentage sites (Phase 1) |
 | SGR 2 (faint) for frame/separators | Theme-adaptive dim per D-02 without hardcoding a gray | ✓ Confirmed readable on light and dark themes (Phase 1 UAT) |
 | One `git status --porcelain=v2 --branch` + stash `rev-list`, all under `GIT_OPTIONAL_LOCKS=0`, uncached | One read-only ~12 ms process per render; never takes index locks while Claude itself runs git | ✓ 10 full renders ≤ 2 s budget (measured 0–1 s); session cache kept as a documented lever only (Phase 2) |
-| Semantic per-marker git colors spanning the whole token (magenta branch, yellow `*`/`↓N`, green `≡`/`↑N`, red `≢`, dim `#N`) | Glanceability — each marker reads as one colored unit | ✓ Legible on light and dark themes (Phase 2 UAT) |
+| Semantic per-marker git colors spanning the whole token (magenta branch — magenta short SHA when detached, unchanged; yellow `*`; one mutually exclusive sync token: green `≡` in-sync, red `≢` no-upstream, yellow `↓N` behind-only, blue `↑N` ahead-only, both arrows red when diverged; cyan `#N`) | Glanceability — each marker reads as one colored unit; sync color encodes severity (quick task 260906-w19) | ✓ Legible on light and dark themes (Phase 2 UAT); sync merge shipped 2026-09-06 |
 | Type-guard all 10 stdin fields inside the single jq `@sh` program (`strings` on MODEL/EFFORT/DIR, `uint` = numbers→floor→0≤n<1e15 on the 7 numerics) | jq `@sh` quotes each array element as its own eval word (array-payload RCE, CR-02); string `resets_at` reached `$(( ))` (CR-01); floats/exponents leaked stderr | ✓ Both RCEs closed at one choke point, one jq pass preserved, renders byte-identical; 14/14 threats closed in 02-SECURITY.md (Phase 2) |
 | Every new harness security probe must be proven to bite against the pre-fix script | A probe that cannot fail is false assurance (02-VERIFICATION CR-02 was missed by string-only probes) | ✓ Convention established; suite 82 → 125 checks with recorded pre-fix failure sets (Phase 2) |
 | Canonical script lives at `kit/files/home/.claude/statusline.sh`; sandboxes get it via an sbx mixin kit (`kit/spec.yaml`), not a shared `~/.claude` | Docker Sandboxes import neither host `~/.claude` nor host symlinks; a kit is the only route that lands the file at `/home/agent/.claude` | ✓ Pure `git mv` (100755 preserved); kit validated offline and live — `tests/sandbox.sh` 11 checks / 0 failures (Phase 3) |
