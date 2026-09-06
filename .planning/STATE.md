@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-08-23)
 Phase: Milestone v1.0 complete
 Plan: —
 Status: Awaiting next milestone
-Last activity: 2026-08-27 - Completed quick task 260827-02m: drop the branch glyph from the three live spec docs and add a separator row to the README legend
+Last activity: 2026-09-06 - Completed quick task 260906-w19: merge git sync indicators into one mutually exclusive subsegment (new colors, cyan stash); review fixes (gone-upstream ≢, doc unswap); suite 220 -> 226 checks; verification passed
 
 ## Performance Metrics
 
@@ -95,6 +95,7 @@ Open, carried into the next milestone (none blocking):
 |---|-------------|------|--------|--------|-----------|
 | 260826-wid | change the branch symbol ⎇ to the dot separator " · " to make Git a separate segment | 2026-08-26 | 1b8b1df | Needs Review | [260826-wid-change-the-branch-symbol-to-a-dot-separa](./quick/260826-wid-change-the-branch-symbol-to-a-dot-separa/) |
 | 260827-02m | drop the branch glyph from the three live spec docs and add a separator row to the README legend | 2026-08-27 | a31c991 | — (not validated) | [260827-02m-drop-the-branch-glyph-from-the-three-liv](./quick/260827-02m-drop-the-branch-glyph-from-the-three-liv/) |
+| 260906-w19 | merge detached/upstream/behind/ahead into one mutually exclusive git sync subsegment with new colors; stash to cyan | 2026-09-06 | fa03035 | Verified | [260906-w19-merge-detached-upstream-behind-ahead-int](./quick/260906-w19-merge-detached-upstream-behind-ahead-int/) |
 
 ### Roadmap Evolution
 
