@@ -136,8 +136,11 @@ seg_dir() {
   printf '%s' "${BLUE}${d}${RESET}"
 }
 
-# Git segment: magenta branch label, yellow dirty star, green/red sync symbol,
-# yellow behind / green ahead counts, dim stash count — hidden entirely
+# Git segment: magenta branch label (magenta short SHA when detached — the
+# label IS the detached marker, no sync glyph; D-24/D-25), yellow dirty star,
+# then ONE mutually exclusive sync token: green ≡ in-sync (upstream, ahead=
+# behind=0) / blue ↑N ahead-only / yellow ↓N behind-only / red ↓B ↑A when
+# diverged / red ≢ no-upstream (D-19); cyan stash count. Hidden entirely
 # outside a repo (GIT-01..05, D-17..D-20, D-24..D-27). One primary status
 # call parsed below, plus one stash count; all read-only and lock-free via
 # GIT_OPTIONAL_LOCKS=0, uncached per D-29 (PORT-02).
@@ -172,13 +175,20 @@ seg_git() {
   [ -z "$stash" ] && stash=0                  # no stash ref -> 0
   out="${MAGENTA}${label}${RESET}"
   [ "$dirty" -eq 1 ] && out="${out}${YELLOW}*${RESET}"
-  if [ "$detached" -eq 0 ]; then              # D-25: no sync symbol when detached
-    if [ "$upstream" -eq 1 ]; then out="${out} ${GREEN}≡${RESET}"
-    else out="${out} ${RED}≢${RESET}"; fi     # red is the user's explicit choice (D-19)
+  if [ "$detached" -eq 0 ]; then              # D-25: no sync token when detached (SHA label is the marker)
+    if [ "$upstream" -eq 0 ]; then            # no upstream — red is the user's explicit choice (D-19)
+      out="${out} ${RED}≢${RESET}"
+    elif [ "$behind" -gt 0 ] && [ "$ahead" -gt 0 ]; then
+      out="${out} ${RED}↓${behind}${RESET} ${RED}↑${ahead}${RESET}"  # diverged: both red, per-token spans
+    elif [ "$behind" -gt 0 ]; then
+      out="${out} ${YELLOW}↓${behind}${RESET}"
+    elif [ "$ahead" -gt 0 ]; then
+      out="${out} ${BLUE}↑${ahead}${RESET}"
+    else
+      out="${out} ${GREEN}≡${RESET}"          # in sync: upstream present, ahead=behind=0
+    fi
   fi
-  [ "$behind" -gt 0 ] && out="${out} ${YELLOW}↓${behind}${RESET}"
-  [ "$ahead" -gt 0 ]  && out="${out} ${GREEN}↑${ahead}${RESET}"
-  [ "$stash" -gt 0 ]  && out="${out} ${DIM}#${stash}${RESET}"
+  [ "$stash" -gt 0 ] && out="${out} ${CYAN}#${stash}${RESET}"
   printf '%s' "$out"
 }
 
