@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v1.0
 status: Awaiting next milestone
 stopped_at: "Completed quick task 260912-vgx: reset clock times on row 2"
-last_updated: "2026-09-12T20:22:56.079Z"
-last_activity: 2026-09-12
+last_updated: "2026-09-12T21:53:47.256Z"
+last_activity: 2026-09-13
 last_activity_desc: "Quick task 260912-vgx: row-2 reset clock times"
-state_head: 0f9488c1e1296d52dceffdddaa00d40d24cffa23
+state_head: 29f66a474aab4e3a6346a04c853bb5e97a521676
 current_phase: 04
 progress:
   total_phases: 4
@@ -103,6 +103,7 @@ Open, carried into the next milestone (none blocking):
 | 260906-w19 | merge detached/upstream/behind/ahead into one mutually exclusive git sync subsegment with new colors; stash to cyan | 2026-09-06 | fa03035 | Verified | [260906-w19-merge-detached-upstream-behind-ahead-int](./quick/260906-w19-merge-detached-upstream-behind-ahead-int/) |
 | 260912-vgx | Reformat second status line row: show concrete reset clock times instead of countdown durations | 2026-09-12 | 0f9488c | Needs Review | [260912-vgx-reformat-second-status-line-row-show-con](./quick/260912-vgx-reformat-second-status-line-row-show-con/) |
 | 260912-x11 | Close the timezone test gap: exercise the reset-clock offset path end-to-end under a non-UTC TZ | 2026-09-13 | 765a30a | Verified | [260912-x11-close-the-timezone-test-gap-exercise-the](./quick/260912-x11-close-the-timezone-test-gap-exercise-the/) |
+| 6 | Close WR-02 as not-a-defect: same-weekday reset collision is self-disambiguating | 2026-09-12 | 29f66a4 | — | — |
 
 ### Roadmap Evolution
 
