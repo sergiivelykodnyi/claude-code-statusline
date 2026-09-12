@@ -1,18 +1,19 @@
 ---
 gsd_state_version: 1.0
+milestone: v1.0
 status: Awaiting next milestone
-stopped_at: Phase 04 complete — all phases complete
-last_updated: "2026-08-23T00:50:13.846Z"
-last_activity: 2026-08-23
-last_activity_desc: Milestone v1.0 completed and archived
-state_head: 9a4b59317cce9705b9abe1747be5360bd0d42b18
+stopped_at: "Completed quick task 260912-vgx: reset clock times on row 2"
+last_updated: "2026-09-12T20:22:56.079Z"
+last_activity: 2026-09-12
+last_activity_desc: "Quick task 260912-vgx: row-2 reset clock times"
+state_head: 0f9488c1e1296d52dceffdddaa00d40d24cffa23
+current_phase: 04
 progress:
   total_phases: 4
   completed_phases: 4
   total_plans: 13
   completed_plans: 13
   percent: 100
-current_phase: 04
 ---
 
 # Project State
@@ -29,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-08-23)
 Phase: Milestone v1.0 complete
 Plan: —
 Status: Awaiting next milestone
-Last activity: 2026-09-06 - Completed quick task 260906-w19: merge git sync indicators into one mutually exclusive subsegment (new colors, cyan stash); review fixes (gone-upstream ≢, doc unswap); suite 220 -> 226 checks; verification passed
+Last activity: 2026-09-12 - Completed quick task 260912-vgx: row 2 rate-limit windows now show the local reset clock (`5h 50% 14:50`, weekday only on another day, `now` once passed) instead of countdown durations; one folded `date '+%s %z'` call, fmt_duration removed; suite 226 -> 242 checks green; four live spec docs reconciled
 
 ## Performance Metrics
 
@@ -78,6 +79,10 @@ Last activity: 2026-09-06 - Completed quick task 260906-w19: merge git sync indi
 
 v1.0 decisions are archived in PROJECT.md → Key Decisions (full log) and `milestones/v1.0-ROADMAP.md` → Milestone Summary. Fresh log starts with the next milestone.
 
+- [Phase 04]: Row 2 rate-limit segments render LABEL PCT% TIME with a local reset clock (D-66/D-67); fmt_duration removed (D-71)
+- [Phase 04]: Local UTC offset comes from a folded date '+%s %z' call with a case-guarded parser and UTC fallback; DST skew accepted and documented (D-68)
+- [Phase 04]: Tests pin TZ=UTC and verify the one live clock check against a libc oracle rather than adding a STATUSLINE_NOW production seam (D-72)
+
 ### Pending Todos
 
 None yet.
@@ -96,6 +101,7 @@ Open, carried into the next milestone (none blocking):
 | 260826-wid | change the branch symbol ⎇ to the dot separator " · " to make Git a separate segment | 2026-08-26 | 1b8b1df | Needs Review | [260826-wid-change-the-branch-symbol-to-a-dot-separa](./quick/260826-wid-change-the-branch-symbol-to-a-dot-separa/) |
 | 260827-02m | drop the branch glyph from the three live spec docs and add a separator row to the README legend | 2026-08-27 | a31c991 | — (not validated) | [260827-02m-drop-the-branch-glyph-from-the-three-liv](./quick/260827-02m-drop-the-branch-glyph-from-the-three-liv/) |
 | 260906-w19 | merge detached/upstream/behind/ahead into one mutually exclusive git sync subsegment with new colors; stash to cyan | 2026-09-06 | fa03035 | Verified | [260906-w19-merge-detached-upstream-behind-ahead-int](./quick/260906-w19-merge-detached-upstream-behind-ahead-int/) |
+| 260912-vgx | Reformat second status line row: show concrete reset clock times instead of countdown durations | 2026-09-12 | 0f9488c | Needs Review | [260912-vgx-reformat-second-status-line-row-show-con](./quick/260912-vgx-reformat-second-status-line-row-show-con/) |
 
 ### Roadmap Evolution
 
@@ -111,8 +117,8 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-08-23
-Stopped at: Milestone v1.0 MVP completed, archived, and tagged — next: /gsd-new-milestone
+Last session: 2026-09-12T20:22:55.703Z
+Stopped at: Completed quick task 260912-vgx: reset clock times on row 2
 Resume file: None
 
 ## Operator Next Steps
