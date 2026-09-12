@@ -21,10 +21,12 @@
 # Exit status: 0 on success; 1 on any byte difference or a REQUIRE_INSTALLED
 # miss (helpers may exit non-zero — only statusline.sh itself is never-fail).
 #
-# Determinism: all 8 fixtures render time-independently — resets_at 0 renders
-# "(now)" forever, and empty/malformed fall back to the repo directory
-# basename, identical in the sandbox because the workspace is mounted at the
-# same absolute path. fable-stdin.json (rate_limits.model_scoped) renders
+# Determinism: all 8 fixtures render time-independently — resets_at 0 is in
+# the past forever, so every window renders the literal "now" (D-69) and no
+# wall clock is ever formatted; the exported TZ pin below removes the runner's
+# zone from the comparison as well. Empty/malformed fall back to the repo
+# directory basename, identical in the sandbox because the workspace is
+# mounted at the same absolute path. fable-stdin.json (rate_limits.model_scoped) renders
 # without the Fable segment because this dumper exports the kill switch.
 # Raw bytes are compared on purpose: PORT-01 "identical output" includes
 # the color codes, so nothing is stripped here.
@@ -34,6 +36,7 @@
 cd "$(dirname "$0")/.." || exit 1
 SL=kit/files/home/.claude/statusline.sh
 export STATUSLINE_NO_FABLE=1   # D-64: dumps never depend on network or credentials
+export TZ=UTC                  # D-72: pin the zone so rendered clock times are runner-independent
 OUT=${1:?usage: tests/render-fixtures.sh OUTDIR}
 INSTALLED=${INSTALLED:-$HOME/.claude/statusline.sh}
 

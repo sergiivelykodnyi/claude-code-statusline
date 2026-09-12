@@ -283,7 +283,7 @@ t1=$(date +%s)
 FAB_L2=$(printf '%s\n' "$FAB_RAW" | strip_ansi | sed -n 2p)
 emit "INFO sandbox Fable render: $(( t1 - t0 ))s  line 2: $FAB_L2"
 if [ "$CREDS" = present ]; then
-  case "$FAB_L2" in *"· Fable "*"%/1w"*) r=0 ;; *) r=1 ;; esac
+  case "$FAB_L2" in *"· Fable "*"%"*) r=0 ;; *) r=1 ;; esac
   check_ok "Fable segment renders in sandbox (FAB-02, D-63)" $r
 else
   case "$FAB_L2" in *Fable*) r=1 ;; *) r=0 ;; esac
@@ -292,6 +292,18 @@ else
 fi
 # Cache evidence, mode only (expected -rw------- owned by agent when present).
 emit "INFO sandbox cache: $(sx "$NAME" ls -l /home/agent/.claude/statusline-usage-cache.json 2>&1)"
+
+# 5.14 Folded date(1) format under GNU userland (D-68). The whole reset-clock
+# feature rests on one call emitting BOTH the epoch and the ±hhmm offset, and
+# that was only ever verified against BSD date on the macOS host — this run is
+# the only place the Linux half can be settled. Informational, not a gate: a
+# surprising answer here should be read, not silently swallowed by a red X.
+DZ=$(sx "$NAME" /bin/bash -c "date '+%s %z'" 2>/dev/null)
+emit "INFO sandbox date '+%s %z' -> [$DZ]"
+case "$DZ" in
+  [0-9]*" "[+-][0-9][0-9][0-9][0-9]) emit "INFO folded date format OK under GNU userland (D-68)" ;;
+  *) emit "WARN folded date format returned an unexpected shape — reset clocks may fall back to UTC" ;;
+esac
 
 # --- 6. Primary sandbox disposition + summary (summary is the LAST line) ----
 

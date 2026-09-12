@@ -18,6 +18,10 @@ SL=kit/files/home/.claude/statusline.sh
 # Kill switch (D-64): every render below must stay network-free and
 # Keychain-free; the Fable probe block overrides it per command.
 export STATUSLINE_NO_FABLE=1
+# Zone pin (D-72): rendered clock times must not depend on the runner zone,
+# and the host-vs-sandbox byte comparison (PORT-01) stays valid for any future
+# fixture that carries a non-zero reset.
+export TZ=UTC
 
 CHECKS=0
 FAILS=0
@@ -78,11 +82,53 @@ for pair in 0:0 999:999 1000:1k 1500:1.5k 9950:9.9k 10000:10k 100000:100k \
   check_eq "shorten_num $n -> $want" "$want" "$(shorten_num "$n")"
 done
 
-# fmt_duration — full D-09/D-10 table (leading zero units drop, past -> now).
-for pair in -5:now 0:now '30:<1m' '59:<1m' 60:1m 3000:50m 10200:2h:50m \
-            273420:3d:3h:57m 262800:3d:1h:0m 90061:1d:1h:1m; do
-  n=${pair%%:*}; want=${pair#*:}
-  check_eq "fmt_duration $n -> $want" "$want" "$(fmt_duration "$n")"
+# tz_offset_secs — the D-68 table. Whole, half and 45-minute offsets, both
+# signs, and the four unparseable shapes that must degrade to the locked UTC
+# fallback rather than erroring: the empty string (POSIX lets %z emit no
+# characters), plain garbage, the ISO colon form, and a command-substitution
+# payload that must fall through the case guard untouched. The +0800 row is
+# the base-10-prefix regression: a bare $(( 08 )) is a fatal octal error that
+# would blank the entire status line in eight real timezones.
+# Specs are |-delimited: the empty-input row has no other safe delimiter.
+rm -f tests/.pwned
+for spec in '+0300|10800' '-0430|-16200' '+0000|0' '-0000|0' '+1345|49500' \
+            '+0800|28800' '|0' 'garbage|0' '+03:00|0' '$(touch tests/.pwned)|0'; do
+  z=${spec%%|*}; want=${spec#*|}
+  check_eq "tz_offset_secs ${z:-<empty>} -> $want" "$want" "$(tz_offset_secs "$z")"
+done
+[ ! -e tests/.pwned ]
+check_ok "tz_offset_secs injected string: tests/.pwned not created" $?
+rm -f tests/.pwned
+
+# fmt_reset_clock — the D-67 table. TODAY is passed explicitly on every row,
+# so not one of these depends on the runner's clock. Rows cover: zero-padding
+# of both fields, midnight and the last minute of the day, the same-day form
+# (no weekday) and the other-day form (weekday prefix), every weekday name
+# reachable from the (day + 4) % 7 mapping, a non-zero offset shifting the
+# rendered day, and the negative-local-instant row (epoch 0 with a western
+# offset) where floor() must correct day and remainder together — correcting
+# only one yields a valid-looking wrong time.
+# Spec shape: EPOCH:TODAY:OFFSET:EXPECTED.
+for spec in 1728000000:20000:0:'00:00' \
+            1728032700:20000:0:'09:05' \
+            1728086340:20000:0:'23:59' \
+            1728291000:20000:0:'Mon 08:50' \
+            1728118800:20000:0:'Sat 09:00' \
+            1728205200:20000:0:'Sun 09:00' \
+            1728378000:20000:0:'Tue 09:00' \
+            1728464400:20000:0:'Wed 09:00' \
+            1728550800:20000:0:'Thu 09:00' \
+            1728000000:19999:0:'Fri 00:00' \
+            1728032700:20000:10800:'12:05' \
+            1728082800:20000:10800:'Sat 02:00' \
+            0:-1:-14400:'20:00' \
+            0:0:-14400:'Wed 20:00' \
+            0:0:0:'00:00'; do
+  e=${spec%%:*}; rest=${spec#*:}
+  today=${rest%%:*}; rest=${rest#*:}
+  off=${rest%%:*}; want=${rest#*:}
+  check_eq "fmt_reset_clock $e today=$today off=$off -> $want" \
+    "$want" "$(fmt_reset_clock "$e" "$today" "$off")"
 done
 
 # iso_to_epoch — the 17-row RESEARCH Pattern 3 table (D-54): UTC forms,
@@ -146,10 +192,10 @@ run_fixture() {
 
 HERE=${PWD##*/}   # D-13 fallback renders the harness's own PWD basename
 
-run_fixture full           "Opus 5 (high) · myproject" "10%/100k/1M · 50%/5h (now) · 15%/1w (now)"
-run_fixture no-effort      "Opus 5 · myproject"        "10%/100k/1M · 50%/5h (now) · 15%/1w (now)"
+run_fixture full           "Opus 5 (high) · myproject" "10%/100k/1M · 5h 50% now · Week 15% now"
+run_fixture no-effort      "Opus 5 · myproject"        "10%/100k/1M · 5h 50% now · Week 15% now"
 run_fixture no-rate-limits "Opus 5 (high) · myproject" "10%/100k/1M"
-run_fixture only-five-hour "Opus 5 (high) · myproject" "10%/100k/1M · 50%/5h (now)"
+run_fixture only-five-hour "Opus 5 (high) · myproject" "10%/100k/1M · 5h 50% now"
 run_fixture null-context   "Opus 5 (high) · myproject" "0%/0/200k"
 run_fixture empty          "$HERE"                     ""
 run_fixture malformed      "$HERE"                     ""
@@ -159,24 +205,48 @@ run_fixture malformed      "$HERE"                     ""
 check_eq "empty: exactly 2 output lines (D-22)" "2" \
   "$(/bin/bash "$SL" < tests/fixtures/empty.json | wc -l | tr -d '[:space:]')"
 
-# --- 4. Live countdown ------------------------------------------------------
+# --- 4. Live reset clock ----------------------------------------------------
+# The only genuinely clock-dependent check. The expectation is not hard-coded
+# — it comes from libc's own tzdata, so the script's pure arithmetic is
+# checked against an INDEPENDENT implementation rather than against itself.
+#
+# dfmt is harness-only. The date -r / date -d ban in CLAUDE.md applies to the
+# shipped script, which still never calls either; test code is free to ask
+# libc for the truth. BSD form first, GNU form as the fallback — the same
+# dual-fallback shape CLAUDE.md already prescribes for stat. Do not "fix"
+# this into the script's own arithmetic: that would make the test tautological.
+dfmt() { date -r "$1" "+$2" 2>/dev/null || date -d "@$1" "+$2" 2>/dev/null; }
 
+# Residual race (accepted, D-72): the harness and the script read their clocks
+# milliseconds apart, so they can disagree about "today" only when local
+# midnight falls inside that gap. A production STATUSLINE_NOW seam would close
+# it, but permanent production surface is a bad trade for that probability.
+# The rendered HH:MM itself is fully deterministic — it derives from the
+# injected resets_at, never from the script's own clock.
 now=$(date +%s)
-l2=$(jq --argjson t5 $(( now + 10230 )) --argjson t7 $(( now + 273450 )) \
+t5=$(( now + 600 ))            # same local day in almost every case
+t7=$(( now + 3 * 86400 ))      # always a different local day -> weekday shown
+
+w5=$(dfmt "$t5" '%H:%M')
+[ "$(dfmt "$t5" '%F')" = "$(dfmt "$now" '%F')" ] || w5="$(dfmt "$t5" '%a') $w5"
+w7="$(dfmt "$t7" '%a') $(dfmt "$t7" '%H:%M')"
+
+l2=$(jq --argjson t5 "$t5" --argjson t7 "$t7" \
       '.rate_limits.five_hour.resets_at = $t5 | .rate_limits.seven_day.resets_at = $t7' \
       tests/fixtures/full.json | /bin/bash "$SL" | strip_ansi | sed -n 2p)
-case "$l2" in *"(2h:50m)"*"(3d:3h:57m)"*) r=0;; *) r=1;; esac
-check_ok "live countdown: (2h:50m) and (3d:3h:57m) in '$l2'" $r
+case "$l2" in *"5h 50% $w5"*"Week 15% $w7"*) r=0;; *) r=1;; esac
+check_ok "live reset clock: '$w5' and '$w7' in '$l2'" $r
 
-# --- 5. Threshold color bytes (D-05: label/countdown outside colored span) --
+# --- 5. Threshold color bytes (D-05/D-70: dim label and clock outside the
+# colored span, which wraps the percentage number only) ---------------------
 
 for spec in 69.9:32:69 70:33:70 89.9:33:89 90:31:90; do
   p=${spec%%:*}; rest=${spec#*:}; code=${rest%%:*}; num=${rest#*:}
   raw=$(jq --argjson p "$p" '.rate_limits.five_hour.used_percentage = $p' \
         tests/fixtures/full.json | /bin/bash "$SL")
-  want="${ESC}[${code}m${num}%${ESC}[0m/5h"
+  want="${ESC}[2m5h${ESC}[0m ${ESC}[${code}m${num}%${ESC}[0m"
   case "$raw" in *"$want"*) r=0;; *) r=1;; esac
-  check_ok "threshold bytes: pct $p -> SGR ${code}m before ${num}%, reset before /5h" $r
+  check_ok "threshold bytes: pct $p -> dim 5h label, SGR ${code}m around ${num}% only" $r
 done
 
 # --- 6. Palette purity (D-02: named-16 set only) ----------------------------
@@ -231,7 +301,7 @@ errbytes=$(wc -c < "$ERRTMP" | tr -d '[:space:]')
 check_eq "non-numeric probe: total_input_tokens stderr bytes" "0" "$errbytes"
 check_eq "non-numeric probe: total_input_tokens line 1" "Opus 5 (high) · myproject" \
   "$(printf '%s\n' "$out" | strip_ansi | sed -n 1p)"
-check_eq "non-numeric probe: total_input_tokens line 2" "10%/0/1M · 50%/5h (now) · 15%/1w (now)" \
+check_eq "non-numeric probe: total_input_tokens line 2" "10%/0/1M · 5h 50% now · Week 15% now" \
   "$(printf '%s\n' "$out" | strip_ansi | sed -n 2p)"
 
 # 7.4 Array payload (CR-02 regression). The injected value is the JSON array
@@ -271,16 +341,16 @@ rm -f tests/.pwned
 # not bash-parseable integers (float / exponent) must never leak arithmetic
 # or [ errors to stderr: the jq canonicalizer floors them and drops anything
 # out of range, so the render degrades per hide-over-placeholder (an
-# out-of-range epoch hides the countdown; a float token count is floored)
+# out-of-range epoch drops the time slot; a float token count is floored)
 # while a 23.5-style percentage still renders 23% (CLAUDE.md float contract,
 # pinned here so the canonicalizer can never break it). --argjson carries
 # the literal to the script verbatim (section-5 discipline); stderr is read
 # back through $ERRTMP (section-7.3 discipline).
-for spec in 'five_hour resets_at float|.rate_limits.five_hour.resets_at|1755800000.5|10%/100k/1M · 50%/5h (now) · 15%/1w (now)' \
-            'five_hour resets_at exponent|.rate_limits.five_hour.resets_at|1e100|10%/100k/1M · 50%/5h · 15%/1w (now)' \
-            'context_window used_percentage exponent|.context_window.used_percentage|1e2|100%/100k/1M · 50%/5h (now) · 15%/1w (now)' \
-            'context_window total_input_tokens float|.context_window.total_input_tokens|100000.7|10%/100k/1M · 50%/5h (now) · 15%/1w (now)' \
-            'five_hour used_percentage float|.rate_limits.five_hour.used_percentage|23.5|10%/100k/1M · 23%/5h (now) · 15%/1w (now)'; do
+for spec in 'five_hour resets_at float|.rate_limits.five_hour.resets_at|1755800000.5|10%/100k/1M · 5h 50% now · Week 15% now' \
+            'five_hour resets_at exponent|.rate_limits.five_hour.resets_at|1e100|10%/100k/1M · 5h 50% · Week 15% now' \
+            'context_window used_percentage exponent|.context_window.used_percentage|1e2|100%/100k/1M · 5h 50% now · Week 15% now' \
+            'context_window total_input_tokens float|.context_window.total_input_tokens|100000.7|10%/100k/1M · 5h 50% now · Week 15% now' \
+            'five_hour used_percentage float|.rate_limits.five_hour.used_percentage|23.5|10%/100k/1M · 5h 23% now · Week 15% now'; do
   label=${spec%%|*}; rest=${spec#*|}
   path=${rest%%|*};  rest=${rest#*|}
   value=${rest%%|*}; want=${rest#*|}
@@ -536,7 +606,7 @@ CREDS_EXP="$TESTTMP/creds-expired.json"     # synthetic, expired expiresAt (epoc
 NOCREDS="$TESTTMP/none.json"                # never created
 printf '%s\n' '{"claudeAiOauth":{"accessToken":"test-token","expiresAt":9999999999999}}' > "$CREDS"
 printf '%s\n' '{"claudeAiOauth":{"accessToken":"test-token","expiresAt":1000}}' > "$CREDS_EXP"
-L2_BASE="10%/100k/1M · 50%/5h (now) · 15%/1w (now)"   # full.json line 2 without Fable
+L2_BASE="10%/100k/1M · 5h 50% now · Week 15% now"   # full.json line 2 without Fable
 
 # 11.1 Cold render: fetch from the fixture, render the peer segment last,
 # write the 0600 cache with the fetched values (FAB-01, FAB-03, D-51, D-57).
@@ -544,14 +614,15 @@ rm -f "$CACHE"
 fable_render "$CACHE" "$FIX_URL" "$CREDS" tests/fixtures/full.json
 check_eq "fable: cold render exit code" "0" "$FB_RC"
 check_eq "fable: cold render stderr bytes" "0" "$FB_ERRBYTES"
-check_eq "fable: cold render line 2" "$L2_BASE · Fable 74%/1w (now)" "$FB_L2"
+check_eq "fable: cold render line 2" "$L2_BASE · Fable 74% now" "$FB_L2"
 check_eq "fable: cache file mode -rw-------" "-rw-------" "$(ls -l "$CACHE" | cut -c1-10)"
 check_eq "fable: cache content [true,74,0]" "[true,74,0]" \
   "$(jq -c '[.fetched_at > 0, .pct, .resets_at]' "$CACHE")"
 
-# 11.2 Bytes: dim label, threshold colour on the number only, plain /1w
-# (D-05, D-51, D-53); palette purity over the Fable render (D-02).
-want="${ESC}[2mFable${ESC}[0m ${ESC}[33m74%${ESC}[0m/1w"
+# 11.2 Bytes: dim label first, threshold colour on the number only, plain
+# clock text after it (D-05, D-51, D-53, D-66, D-70); palette purity over the
+# Fable render (D-02).
+want="${ESC}[2mFable${ESC}[0m ${ESC}[33m74%${ESC}[0m now"
 case "$FB_OUT" in *"$want"*) r=0;; *) r=1;; esac
 check_ok "fable: label+threshold bytes pct 74" $r
 r=0
@@ -572,7 +643,7 @@ for spec in 69:32 70:33 89:33 90:31; do
      tests/fixtures/usage/fable.json > "$TESTTMP/fable-p$p.json"
   rm -f "$CACHE"
   fable_render "$CACHE" "file://$TESTTMP/fable-p$p.json" "$CREDS" tests/fixtures/full.json
-  want="${ESC}[2mFable${ESC}[0m ${ESC}[${code}m${p}%${ESC}[0m/1w"
+  want="${ESC}[2mFable${ESC}[0m ${ESC}[${code}m${p}%${ESC}[0m now"
   case "$FB_OUT" in *"$want"*) r=0;; *) r=1;; esac
   check_ok "fable: threshold bytes pct $p -> SGR ${code}m" $r
 done
@@ -586,23 +657,23 @@ fable_render "$CACHE" "$FIX_URL" "$CREDS" tests/fixtures/full.json       # warm:
 jq '(.limits[] | select(.kind=="weekly_scoped") | .percent) = 42' \
    tests/fixtures/usage/fable.json > "$TESTTMP/fable-42.json"
 fable_render "$CACHE" "file://$TESTTMP/fable-42.json" "$CREDS" tests/fixtures/full.json
-case "$FB_L2" in *"Fable 74%/1w (now)"*) r=0;; *) r=1;; esac
+case "$FB_L2" in *"Fable 74% now"*) r=0;; *) r=1;; esac
 check_ok "fable: cache hit (no fetch)" $r
 jq --argjson now "$(date +%s)" '.fetched_at = $now - 400' "$CACHE" > "$CACHE.new" && mv "$CACHE.new" "$CACHE"
 fable_render "$CACHE" "file:///nonexistent" "$CREDS" tests/fixtures/full.json
-case "$FB_L2" in *"Fable 74%/1w (now)"*) r=0;; *) r=1;; esac
+case "$FB_L2" in *"Fable 74% now"*) r=0;; *) r=1;; esac
 check_ok "fable: stale-grace serve" $r
 jq --argjson now "$(date +%s)" '.fetched_at = $now - 4000' "$CACHE" > "$CACHE.new" && mv "$CACHE.new" "$CACHE"
 fable_render "$CACHE" "file:///nonexistent" "$CREDS" tests/fixtures/full.json
 check_eq "fable: past-grace hide" "$L2_BASE" "$FB_L2"
 check_eq "fable: past-grace stderr bytes" "0" "$FB_ERRBYTES"
 
-# 11.4 Missing resets_at: number without parens (D-54).
+# 11.4 Missing resets_at: label and percentage only, no time slot (D-54, D-69).
 jq '(.limits[] | select(.kind=="weekly_scoped") | .resets_at) = null' \
    tests/fixtures/usage/fable.json > "$TESTTMP/fable-norst.json"
 rm -f "$CACHE"
 fable_render "$CACHE" "file://$TESTTMP/fable-norst.json" "$CREDS" tests/fixtures/full.json
-check_eq "fable: no resets_at -> no parens" "$L2_BASE · Fable 74%/1w" "$FB_L2"
+check_eq "fable: no resets_at -> no time slot" "$L2_BASE · Fable 74%" "$FB_L2"
 
 # 11.5 No Fable bucket: hidden, and the negative result is cached so the
 # next render does not fetch even though the URL now points at the valid
@@ -638,7 +709,7 @@ check_eq "fable: kill switch hidden" "$L2_BASE" "$(printf '%s\n' "$out" | strip_
 # no network, no credentials needed.
 rm -f "$CACHE"
 fable_render "$CACHE" "file:///nonexistent" "$NOCREDS" tests/fixtures/fable-stdin.json
-check_eq "fable: stdin-first line 2" "$L2_BASE · Fable 33%/1w (now)" "$FB_L2"
+check_eq "fable: stdin-first line 2" "$L2_BASE · Fable 33% now" "$FB_L2"
 test ! -e "$CACHE"
 check_ok "fable: stdin-first no cache" $?
 
@@ -646,7 +717,7 @@ check_ok "fable: stdin-first no cache" $?
 # rate-limit windows are absent.
 rm -f "$CACHE"
 fable_render "$CACHE" "$FIX_URL" "$CREDS" tests/fixtures/no-rate-limits.json
-check_eq "fable: alone on line 2" "10%/100k/1M · Fable 74%/1w (now)" "$FB_L2"
+check_eq "fable: alone on line 2" "10%/100k/1M · Fable 74% now" "$FB_L2"
 
 # 11.10 Timeout / offline (FAB-03, FAB-04, D-59): a blackhole endpoint
 # (TEST-NET-1, never routed) with the curl bound lowered to 1 s must hide the
@@ -693,7 +764,8 @@ rm -f tests/.pwned
 # the arrays[]?/objects and strings/uint guards collapse each to one empty
 # word, so eval never sees extra words; an emptied pct skips the stdin
 # branch and, with no credentials, the segment hides. An emptied resets_at
-# keeps the valid pct (D-54): number without parens, still no injection.
+# keeps the valid pct (D-54, D-69): label and percentage, no time slot, still
+# no injection.
 for spec in 'model_scoped:.rate_limits.model_scoped' \
             'display_name:.rate_limits.model_scoped[0].display_name' \
             'utilization:.rate_limits.model_scoped[0].utilization' \
@@ -706,7 +778,7 @@ for spec in 'model_scoped:.rate_limits.model_scoped' \
   [ ! -e tests/.pwned ]
   check_ok "fable: stdin array $label tests/.pwned not created" $?
   if [ "$label" = resets_at ]; then
-    check_eq "fable: stdin array $label -> no parens (pct kept)" "$L2_BASE · Fable 33%/1w" "$FB_L2"
+    check_eq "fable: stdin array $label -> no time slot (pct kept)" "$L2_BASE · Fable 33%" "$FB_L2"
   else
     check_eq "fable: stdin array $label hidden" "$L2_BASE" "$FB_L2"
   fi
