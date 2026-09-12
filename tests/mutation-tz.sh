@@ -67,7 +67,8 @@ run_mutant() {
   awk -v repl="$repl" '
     $0 ~ /^  TZOFF=\$\(tz_offset_secs/ { print repl; next }
     { print }
-  ' "$SRC" > "$work/$SRC.mut" && mv "$work/$SRC.mut" "$work/$SRC" || {
+  ' "$SRC" > "$work/$SRC.mut" && mv "$work/$SRC.mut" "$work/$SRC" \
+    && chmod +x "$work/$SRC" || {
     FAILS=$(( FAILS + 1 ))
     printf 'FAIL mutant [%s]: awk rewrite failed\n' "$name"
     rm -rf "$work"
