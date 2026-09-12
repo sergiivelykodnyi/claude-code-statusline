@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-08-23)
 Phase: Milestone v1.0 complete
 Plan: —
 Status: Awaiting next milestone
-Last activity: 2026-09-12 - Completed quick task 260912-vgx: row 2 rate-limit windows now show the local reset clock (`5h 50% 14:50`, weekday only on another day, `now` once passed) instead of countdown durations; one folded `date '+%s %z'` call, fmt_duration removed; suite 226 -> 242 checks green; four live spec docs reconciled
+Last activity: 2026-09-13 - Completed quick task 260912-x11: closed the timezone test gap found by the vgx code review; tests/run.sh now renders end-to-end under four sub-hour no-DST zones (242 -> 250 checks) and tests/mutation-tz.sh gates it with 2 mutants, 0 survivors; product code untouched
 
 ## Performance Metrics
 
@@ -102,6 +102,7 @@ Open, carried into the next milestone (none blocking):
 | 260827-02m | drop the branch glyph from the three live spec docs and add a separator row to the README legend | 2026-08-27 | a31c991 | — (not validated) | [260827-02m-drop-the-branch-glyph-from-the-three-liv](./quick/260827-02m-drop-the-branch-glyph-from-the-three-liv/) |
 | 260906-w19 | merge detached/upstream/behind/ahead into one mutually exclusive git sync subsegment with new colors; stash to cyan | 2026-09-06 | fa03035 | Verified | [260906-w19-merge-detached-upstream-behind-ahead-int](./quick/260906-w19-merge-detached-upstream-behind-ahead-int/) |
 | 260912-vgx | Reformat second status line row: show concrete reset clock times instead of countdown durations | 2026-09-12 | 0f9488c | Needs Review | [260912-vgx-reformat-second-status-line-row-show-con](./quick/260912-vgx-reformat-second-status-line-row-show-con/) |
+| 260912-x11 | Close the timezone test gap: exercise the reset-clock offset path end-to-end under a non-UTC TZ | 2026-09-13 | 765a30a | Verified | [260912-x11-close-the-timezone-test-gap-exercise-the](./quick/260912-x11-close-the-timezone-test-gap-exercise-the/) |
 
 ### Roadmap Evolution
 
