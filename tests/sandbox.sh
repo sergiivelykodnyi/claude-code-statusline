@@ -283,8 +283,28 @@ t1=$(date +%s)
 FAB_L2=$(printf '%s\n' "$FAB_RAW" | strip_ansi | sed -n 2p)
 emit "INFO sandbox Fable render: $(( t1 - t0 ))s  line 2: $FAB_L2"
 if [ "$CREDS" = present ]; then
-  case "$FAB_L2" in *"· Fable "*"%"*) r=0 ;; *) r=1 ;; esac
-  check_ok "Fable segment renders in sandbox (FAB-02, D-63)" $r
+  # Pin the segment's trailing SHAPE, not just the presence of a percent sign
+  # (WR-06). Fable renders last on line 2 (D-51) and FAB_L2 is already
+  # ANSI-stripped, so anchoring every arm at end of line is what does the
+  # work: a garbled slot, an empty slot and a trailing space all fall through
+  # to r=1. The four accepting arms are the four legitimate renders:
+  #   no slot at all  — fetch_usage sets F_PCT and F_RST_ISO independently, so
+  #                     an endpoint answering with a percent but no resets_at
+  #                     makes seg_fable render label + percent only (D-69)
+  #   "% now"         — the window has already reset
+  #   "% HH:MM"       — resets later the same local day
+  #   "% Ddd HH:MM"   — resets on another local day
+  # [A-Z][a-z][a-z] may also admit an all-caps weekday under some collating
+  # locale; the assertion is about the slot's shape, not the weekday's
+  # spelling.
+  case "$FAB_L2" in
+    *"· Fable "[0-9]*"%") r=0 ;;
+    *"· Fable "[0-9]*"% now") r=0 ;;
+    *"· Fable "[0-9]*"% "[0-9][0-9]:[0-9][0-9]) r=0 ;;
+    *"· Fable "[0-9]*"% "[A-Z][a-z][a-z]" "[0-9][0-9]:[0-9][0-9]) r=0 ;;
+    *) r=1 ;;
+  esac
+  check_ok "Fable segment renders in sandbox with a pinned slot shape (FAB-02, D-63)" $r
 else
   case "$FAB_L2" in *Fable*) r=1 ;; *) r=0 ;; esac
   check_ok "Fable hidden in sandbox without credentials (D-63)" $r
@@ -296,14 +316,19 @@ emit "INFO sandbox cache: $(sx "$NAME" ls -l /home/agent/.claude/statusline-usag
 # 5.14 Folded date(1) format under GNU userland (D-68). The whole reset-clock
 # feature rests on one call emitting BOTH the epoch and the ±hhmm offset, and
 # that was only ever verified against BSD date on the macOS host — this run is
-# the only place the Linux half can be settled. Informational, not a gate: a
-# surprising answer here should be read, not silently swallowed by a red X.
+# the only place the Linux half can be settled, so it is a real gate (WR-05).
+# A shape the script cannot parse silently pins EVERY reset clock in the
+# container to UTC, and that is exactly the class of answer a green summary
+# must not hide. The raw value is still emitted as evidence below.
 DZ=$(sx "$NAME" /bin/bash -c "date '+%s %z'" 2>/dev/null)
 emit "INFO sandbox date '+%s %z' -> [$DZ]"
+# Shape pattern accepts `1789330000 +0000` and `1789330000 -0530`; it rejects
+# the empty string, a bare epoch, the ISO `+05:30` form and a named zone.
 case "$DZ" in
-  [0-9]*" "[+-][0-9][0-9][0-9][0-9]) emit "INFO folded date format OK under GNU userland (D-68)" ;;
-  *) emit "WARN folded date format returned an unexpected shape — reset clocks may fall back to UTC" ;;
+  [0-9]*" "[+-][0-9][0-9][0-9][0-9]) r=0 ;;
+  *) r=1 ;;
 esac
+check_ok "folded date '+%s %z' shape under GNU userland (D-68) -> [$DZ]" $r
 
 # --- 6. Primary sandbox disposition + summary (summary is the LAST line) ----
 
