@@ -51,16 +51,56 @@ shorten_num() {
   fi
 }
 
-# fmt_duration DELTA_SECONDS -> countdown text (D-09/D-10: only leading zero
-# units drop, past resets print "now" — caller adds the parens).
-fmt_duration() {
-  local delta=$1 d h m
-  if [ "$delta" -le 0 ]; then printf 'now'; return; fi      # D-10
-  if [ "$delta" -lt 60 ]; then printf '<1m'; return; fi
-  d=$(( delta / 86400 )); h=$(( delta % 86400 / 3600 )); m=$(( delta % 3600 / 60 ))
-  if [ "$d" -gt 0 ]; then printf '%sd:%sh:%sm' "$d" "$h" "$m"
-  elif [ "$h" -gt 0 ]; then printf '%sh:%sm' "$h" "$m"
-  else printf '%sm' "$m"; fi
+# tz_offset_secs ±HHMM -> local UTC offset in seconds, 0 for anything else
+# (D-68). POSIX strftime specifies that %z is "replaced by ... no characters
+# if no timezone is determinable", so the empty input is a specified outcome,
+# not a hypothetical — it lands here and yields the locked UTC fallback.
+# The case guard runs BEFORE any expansion: TZ is environment-controlled, so
+# nothing but a literal sign-plus-four-digits ever reaches the arithmetic.
+# Both fields carry the 10# base-10 prefix iso_to_epoch already uses — a bare
+# $(( 08 )) is a fatal octal error that would blank the whole line in eight
+# real timezones.
+tz_offset_secs() {
+  local z=$1 sign oh om s
+  case "$z" in
+    [+-][0-9][0-9][0-9][0-9]) ;;
+    *) printf '0'; return 0 ;;
+  esac
+  sign=${z:0:1}; oh=${z:1:2}; om=${z:3:2}
+  s=$(( 10#$oh * 3600 + 10#$om * 60 ))
+  [ "$sign" = "-" ] && s=$(( -s ))
+  printf '%s' "$s"
+}
+
+WD_NAMES="Sun Mon Tue Wed Thu Fri Sat"        # bash 3.2: no associative arrays
+
+# fmt_reset_clock EPOCH TODAY_DAY OFFSET_SECS -> "HH:MM" on TODAY_DAY, else
+# "Ddd HH:MM" (D-67). Pure floor-division on epoch+offset: no Y/M/D is ever
+# rendered, so the full civil-from-days inverse is not needed and date(1) is
+# never called. Weekday index is (day + 4) % 7 because epoch day 0 is a
+# Thursday and index 0 is Sunday.
+# Accepted limitation (D-68): the offset is the one in effect NOW, not at the
+# reset instant, so a clock can read one hour off for the ~14 days a year a
+# window straddles a DST changeover. Correcting it needs the tz database,
+# which is unreachable without the two banned epoch-formatting flags.
+# Measured, bounded, accepted.
+fmt_reset_clock() {
+  local e=$1 today=$2 off=$3 loc day rem h m wd n i
+  loc=$(( e + off ))
+  day=$(( loc / 86400 )); rem=$(( loc % 86400 ))
+  # bash truncates toward zero, so a negative local instant gives day 0 and a
+  # negative remainder where floor() wants day -1. Correct BOTH together —
+  # fixing one alone yields a valid-looking wrong time.
+  if [ "$rem" -lt 0 ]; then rem=$(( rem + 86400 )); day=$(( day - 1 )); fi
+  h=$(( rem / 3600 )); m=$(( rem % 3600 / 60 ))
+  if [ "$day" -eq "$today" ]; then printf '%02d:%02d' "$h" "$m"; return; fi
+  wd=$(( (day + 4) % 7 ))
+  [ "$wd" -lt 0 ] && wd=$(( wd + 7 ))
+  i=0
+  for n in $WD_NAMES; do                      # word-split lookup (bash 3.2)
+    [ "$i" -eq "$wd" ] && { printf '%s %02d:%02d' "$n" "$h" "$m"; return; }
+    i=$(( i + 1 ))
+  done
 }
 
 # iso_to_epoch ISO -> epoch seconds, or "" when unparseable (D-54). Accepts
@@ -204,36 +244,49 @@ seg_context() {
     "$(shorten_num "$tok")" "$(shorten_num "$CTX_WIN")"
 }
 
-# 5-hour rate-limit segment pct/5h (countdown) (LIM-01, D-05, D-07, D-09/D-10).
+# 5-hour rate-limit segment "5h pct reset-clock" — dim label first, threshold
+# colour on the number only, plain local wall clock for the reset; the time
+# slot is "now" when the reset already passed and disappears entirely when
+# there is no reset (LIM-01, D-05, D-07, D-66, D-67, D-69, D-70).
 seg_5h() {
   [ -n "$P5_PCT" ] || return 0
   local pct=${P5_PCT%.*} out
   [ -z "$pct" ] && pct=0                      # guard before arithmetic
-  out="$(pct_color "$pct")${pct}%${RESET}/5h"
-  [ -n "$P5_RST" ] && out="${out} ($(fmt_duration $(( P5_RST - NOW ))))"
+  out="${DIM}5h${RESET} $(pct_color "$pct")${pct}%${RESET}"
+  if [ -n "$P5_RST" ]; then
+    if [ "$P5_RST" -le "$NOW" ]; then out="${out} now"    # D-69
+    else out="${out} $(fmt_reset_clock "$P5_RST" "$TODAY" "$TZOFF")"; fi
+  fi
   printf '%s' "$out"
 }
 
-# Weekly rate-limit segment pct/1w (countdown) (LIM-02, D-05, D-07, D-09/D-10).
+# Weekly rate-limit segment "Week pct reset-clock" — same shape as seg_5h
+# (LIM-02, D-05, D-07, D-66, D-67, D-69, D-70).
 seg_1w() {
   [ -n "$P7_PCT" ] || return 0
   local pct=${P7_PCT%.*} out
   [ -z "$pct" ] && pct=0                      # guard before arithmetic
-  out="$(pct_color "$pct")${pct}%${RESET}/1w"
-  [ -n "$P7_RST" ] && out="${out} ($(fmt_duration $(( P7_RST - NOW ))))"
+  out="${DIM}Week${RESET} $(pct_color "$pct")${pct}%${RESET}"
+  if [ -n "$P7_RST" ]; then
+    if [ "$P7_RST" -le "$NOW" ]; then out="${out} now"    # D-69
+    else out="${out} $(fmt_reset_clock "$P7_RST" "$TODAY" "$TZOFF")"; fi
+  fi
   printf '%s' "$out"
 }
 
-# Fable weekly segment "Fable pct/1w (countdown)" — a full peer rendered last
-# on line 2: dim literal label, threshold colour on the number only, "/1w"
-# and its own reset countdown plain; hidden (with its separator) whenever the
-# collector found no value (FAB-01, D-51, D-53, D-54, D-55).
+# Fable weekly segment "Fable pct reset-clock" — a full peer rendered last on
+# line 2, same shape as the other two windows with its own dim label; hidden
+# (with its separator) whenever the collector found no value
+# (FAB-01, D-51, D-53, D-54, D-55, D-66, D-67, D-69, D-70).
 seg_fable() {
   [ -n "$FAB_PCT" ] || return 0
   local pct=${FAB_PCT%.*} out
   [ -z "$pct" ] && pct=0                      # guard before arithmetic
-  out="${DIM}Fable${RESET} $(pct_color "$pct")${pct}%${RESET}/1w"
-  [ -n "$FAB_RST" ] && out="${out} ($(fmt_duration $(( FAB_RST - NOW ))))"
+  out="${DIM}Fable${RESET} $(pct_color "$pct")${pct}%${RESET}"
+  if [ -n "$FAB_RST" ]; then
+    if [ "$FAB_RST" -le "$NOW" ]; then out="${out} now"   # D-69
+    else out="${out} $(fmt_reset_clock "$FAB_RST" "$TODAY" "$TZOFF")"; fi
+  fi
   printf '%s' "$out"
 }
 
@@ -387,7 +440,7 @@ main() {
   # already 0-100 (no scaling), resets_at is an ISO string converted by
   # iso_to_epoch in get_fable_weekly. The binding sits before the @sh string
   # because @sh applies to the whole program output; absent today -> empty.
-  local input vars sep model_seg dir_seg git_seg body NOW LINE1 LINE2 FAB_PCT FAB_RST
+  local input vars sep model_seg dir_seg git_seg body NOW NOW_Z TZOFF TODAY LINE1 LINE2 FAB_PCT FAB_RST
   input=$(cat)
   vars=$(printf '%s' "$input" | jq -r '
     def uint: (numbers | floor | select(. >= 0 and . < 1e15)) // "";
@@ -410,7 +463,10 @@ main() {
   " ' 2>/dev/null)
   eval "$vars"
 
-  NOW=$(date +%s)                             # single date call, reused for both windows (LIM-03)
+  NOW_Z=$(date '+%s %z')                      # ONE date call: epoch AND local offset (LIM-03, D-68)
+  NOW=${NOW_Z%% *}                            # parameter expansion, not read: no IFS surprises,
+  TZOFF=$(tz_offset_secs "${NOW_Z##* }")      # and it degrades correctly when %z is empty
+  TODAY=$(( (NOW + TZOFF) / 86400 ))          # local day number: the today/weekday test (D-67)
   get_fable_weekly                            # in main's shell: sets FAB_PCT / FAB_RST for seg_fable
 
   sep=" ${DIM}·${RESET} "                     # dim separator (D-01)
