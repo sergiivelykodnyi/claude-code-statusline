@@ -16,7 +16,16 @@ findings:
   warning: 6
   info: 6
   total: 12
+  closed_not_a_defect: 1
 status: issues_found
+resolutions:
+  - id: WR-02
+    outcome: closed_not_a_defect
+    closed: 2026-09-13
+    note: >-
+      Same-weekday collision is real but self-disambiguating — within a 7-day window the
+      rendered clock time is always at or before the current clock time, so it cannot read
+      as today. Verified empirically against the shipped script; no code change applied.
 ---
 
 # Quick task 260912-vgx: Code Review Report
@@ -103,7 +112,7 @@ check_ok "non-UTC render: TZ=$tzx yields '$wexp'" $r
 A fractional-offset zone is the right choice: with `+0530` a silently-dropped `TZOFF` can never
 produce the expected string by accident.
 
-### WR-02: A weekly reset exactly 7 local days out renders a weekday identical to today's
+### WR-02: A weekly reset exactly 7 local days out renders a weekday identical to today's — CLOSED, not a defect
 
 **File:** `kit/files/home/.claude/statusline.sh:96-103`
 **Issue:** `fmt_reset_clock` prints the bare `HH:MM` only when `day -eq today`, and a 3-letter
@@ -135,6 +144,60 @@ noting the 7-day collision, so the docs do not cover for it either.
 ```
 
 Then add the `day - today == 7` row to the `fmt_reset_clock` table and update `README.md:29`.
+
+---
+
+**RESOLUTION (2026-09-13): closed as not-a-defect. The fix above was NOT applied.**
+
+The finding describes the shape correctly — the same weekday name does appear, for roughly one
+day in seven — but it does not check the *direction* of the rendered time, which is what makes
+the line readable. Verified empirically against the shipped script:
+
+```
+now = Sat 21:42 (TZ=UTC)
+
+delta | reset at  | renders as         | same weekday?
+------+-----------+--------------------+---------------
+168h  | Sat 21:42 | Week 15% Sat 21:42 | YES
+167h  | Sat 20:42 | Week 15% Sat 20:42 | YES
+160h  | Sat 13:42 | Week 15% Sat 13:42 | YES
+150h  | Sat 03:42 | Week 15% Sat 03:42 | YES
+146h  | Fri 23:42 | Week 15% Fri 23:42 | no
+```
+
+In every same-weekday row the rendered clock time is **earlier than or equal to the current
+clock time**. It is never later. So `Week 15% Mon 21:00` seen at `Mon 22:00` cannot mean tonight —
+21:00 has already passed today — and reads correctly as next Monday.
+
+This is forced, not incidental. A 7-day window means `resets_at - now <= 7 days`. Showing the same
+weekday name requires exactly 7 local midnights between the two instants, and that combination
+constrains the reset's time-of-day to at or before now's time-of-day. A *later* time on the same
+weekday would require a window longer than 7 days.
+
+The reset-boundary sequence was also confirmed end to end:
+
+| Real time | Payload `resets_at` | Renders |
+|---|---|---|
+| Mon 20:59 | Mon 21:00 (today) | `Week 15% 21:00` |
+| Mon 21:01 | Mon 21:00 (stale) | `Week 15% now` |
+| Mon 21:01 | next Mon 21:00 (fresh) | `Week 15% Mon 21:00` |
+
+The intermediate `now` is correct: the script renders only what stdin gives it and never computes
+the next window, so it reports `now` until Claude Code's payload carries a fresh `resets_at`.
+
+**Residual cases, deliberately accepted:**
+
+1. At exactly 168h — the instant a weekly window opens — the rendered time equals the current time.
+   One minute later the clock has advanced and it disambiguates itself. Not worth code.
+2. DST: the offset comes from `%z` at *now*, not at the reset instant, so across a transition the
+   rendered time can shift an hour and land slightly after now's time-of-day on the same weekday.
+   This is the already-documented D-68 skew (~14 days/year), not a separate defect.
+3. If `resets_at` could ever exceed 7 days out (a fixed server-side schedule rather than a rolling
+   window), a later same-weekday time becomes possible and the ambiguity would be real. No evidence
+   either way was found; revisit only if such a payload is observed.
+
+`README.md:29` therefore needs no change — "the weekday appears only when the reset falls on
+another day" is accurate, and the collision it does not mention is self-disambiguating.
 
 ### WR-03: New `-le` comparisons emit stderr when `NOW` is empty — a regression vs. `fmt_duration`
 
