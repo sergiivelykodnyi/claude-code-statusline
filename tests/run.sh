@@ -237,6 +237,56 @@ l2=$(jq --argjson t5 "$t5" --argjson t7 "$t7" \
 case "$l2" in *"5h 50% $w5"*"Week 15% $w7"*) r=0;; *) r=1;; esac
 check_ok "live reset clock: '$w5' and '$w7' in '$l2'" $r
 
+# --- 4b. Non-UTC end-to-end renders (WR-01) ---------------------------------
+# Section 4 above runs under the global TZ=UTC pin, so TZOFF is always 0 there
+# and the zone wiring in main (tz_offset_secs -> TZOFF -> TODAY ->
+# fmt_reset_clock, D-67/D-68) is never exercised end to end. This block renders
+# the real script under four real zones instead, and takes every expectation
+# from libc's own tzdata under that same zone — an independent implementation,
+# never the script's own arithmetic.
+#
+# Zone table properties, both load-bearing:
+#   * NO daylight saving in any of the four — that is what lets each offset be
+#     pinned as a literal that holds all year round.
+#   * SUB-HOUR offsets (:30, :45) — that is what stops a dropped TZOFF or an
+#     offset rounded to whole hours from landing on the expected string by
+#     accident. A whole-hour zone could not tell those mutations apart.
+#
+# The `TZ=$tzx cmd` prefix overrides the global TZ=UTC pin for that one command
+# only and does not leak (verified on bash 3.2.57: a command substitution runs
+# in a subshell, and a prefixed shell function call has its environment
+# restored on return). The UTC pin itself stays — it is still correct for the
+# byte-diff in tests/render-fixtures.sh (D-72).
+#
+# The residual clock race documented in section 4 applies here once per zone,
+# each zone having its own local midnight.
+#
+# Reuses dfmt, now, t5 and t7 from section 4 — do not recompute them.
+for spec in Asia/Kolkata:+0530 Asia/Kathmandu:+0545 \
+            Australia/Eucla:+0845 Pacific/Marquesas:-0930; do
+  tzx=${spec%%:*}; zwant=${spec#*:}
+
+  # A runtime with no zone database resolves any unknown TZ to UTC. The oracle
+  # and the script would then agree at UTC and the render check below would
+  # pass while proving nothing — so assert the zone really resolved first.
+  check_eq "zone database present: TZ=$tzx -> $zwant (a +0000 answer means no tzdata)" \
+    "$zwant" "$(TZ=$tzx date '+%z')"
+
+  z5=$(TZ=$tzx dfmt "$t5" '%H:%M')
+  [ "$(TZ=$tzx dfmt "$t5" '%F')" = "$(TZ=$tzx dfmt "$now" '%F')" ] \
+    || z5="$(TZ=$tzx dfmt "$t5" '%a') $z5"
+  z7="$(TZ=$tzx dfmt "$t7" '%a') $(TZ=$tzx dfmt "$t7" '%H:%M')"
+
+  l2=$(jq --argjson t5 "$t5" --argjson t7 "$t7" \
+        '.rate_limits.five_hour.resets_at = $t5 | .rate_limits.seven_day.resets_at = $t7' \
+        tests/fixtures/full.json | TZ=$tzx /bin/bash "$SL" | strip_ansi | sed -n 2p)
+  case "$l2" in *"5h 50% $z5"*"Week 15% $z7"*) r=0;; *) r=1;; esac
+  # Name prefix `non-UTC render` is a contract with tests/mutation-tz.sh — that
+  # gate greps the mutant log for exactly this prefix to prove the suite went
+  # red for the timezone reason and not incidentally. Do not reword it.
+  check_ok "non-UTC render TZ=$tzx: '$z5' and '$z7' in '$l2'" $r
+done
+
 # --- 5. Threshold color bytes (D-05/D-70: dim label and clock outside the
 # colored span, which wraps the percentage number only) ---------------------
 
