@@ -2,7 +2,7 @@
 
 ## What This Is
 
-A custom `statusline.sh` for Claude Code that renders a two-line status line showing the session at a glance: model name and reasoning effort, current directory, rich git status (branch, dirty state, sync state, ahead/behind, stashes) on line one; context-window usage and 5-hour / weekly rate-limit usage with reset countdowns on line two. It works identically on the user's host machine (macOS) — installed by symlinking `kit/files/home/.claude/statusline.sh` into `~/.claude` — and inside Docker Sandboxes, where the repo's `kit/` sbx mixin kit delivers the same file and merges the `statusLine` setting at every start.
+A custom `statusline.sh` for Claude Code that renders a two-line status line showing the session at a glance: model name and reasoning effort, current directory, rich git status (branch, dirty state, sync state, ahead/behind, stashes) on line one; context-window usage and 5-hour / weekly rate-limit usage with the local clock times they reset at on line two. It works identically on the user's host machine (macOS) — installed by symlinking `kit/files/home/.claude/statusline.sh` into `~/.claude` — and inside Docker Sandboxes, where the repo's `kit/` sbx mixin kit delivers the same file and merges the `statusLine` setting at every start.
 
 ## Core Value
 
@@ -12,19 +12,19 @@ One glance at the terminal tells you everything about the session: which model a
 
 ```text
 model_name (effort) · current_dir_name · current_git_branch branch_status ahead behind stash
-context_usage_pct/context_usage_tokens/window_size · usage_pct/5h (when_reset) · usage_pct/1w (when_reset) · Fable fable_pct/1w (fable_reset)
+context_usage_pct/context_usage_tokens/window_size · 5h usage_pct when_reset · Week usage_pct when_reset · Fable fable_pct fable_reset
 ```
 
 Whole example:
 
 ```text
 Opus 5 (high) · myproject · main* ↓2 ↑3 #2
-10%/100k/1M · 50%/5h (2h:50m) · 15%/1w (3d:5h:57m) · Fable 74%/1w (2d:4h:30m)
+10%/100k/1M · 5h 50% 14:50 · Week 15% Mon 21:10 · Fable 74% Mon 21:10
 ```
 
 > Layout correction (Phase 2): the `╭─ `/`╰─ ` frame prefixes from the original design are removed — Phase 1 shipped with them; Phase 2 drops them.
 
-> Layout correction (Phase 4): the Fable weekly value is a separate last segment with its own countdown — `· Fable 74%/1w (2d:4h:30m)` — instead of the in-segment form the original brief described.
+> Layout correction (Phase 4): the Fable weekly value is a separate last segment with its own reset time — `· Fable 74% Mon 21:10` — instead of the in-segment form the original brief described.
 
 Segment definitions:
 
@@ -37,9 +37,9 @@ Segment definitions:
 - `↑N` — local commits not yet pushed (outgoing)
 - `#N` — number of stashes
 - Context: `used%/used_tokens/window` with shortened numbers (`100k`, `1M`)
-- 5h limit: `used%/5h (reset countdown)`
-- Weekly limit: `used%/1w (reset countdown)`
-- Fable weekly: `Fable used%/1w (reset countdown)` — the Fable 5-specific weekly limit, rendered last on line 2 with its own countdown (Phase 4)
+- 5h limit: `5h used% reset_clock` — dim label, threshold-coloured percentage, then the local 24-hour `HH:MM` the window resets at
+- Weekly limit: `Week used% reset_clock` — same shape; the 3-letter weekday prefixes the clock only when the reset falls on another local day, a reset already passed renders `now`, and an unknown reset drops the time and keeps the percentage
+- Fable weekly: `Fable used% reset_clock` — the Fable 5-specific weekly limit, rendered last on line 2 with its own reset time (Phase 4)
 
 ## Requirements
 

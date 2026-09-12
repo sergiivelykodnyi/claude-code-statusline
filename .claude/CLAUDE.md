@@ -4,7 +4,7 @@
 
 **Claude Code Status Line**
 
-A custom `statusline.sh` for Claude Code that renders a two-line, box-drawing status line showing the session at a glance: model name and reasoning effort, current directory, rich git status (branch, dirty state, sync state, ahead/behind, stashes) on line one; context-window usage and 5-hour / weekly rate-limit usage with reset countdowns on line two. It must work identically on the user's host machine (macOS) and inside Docker Sandboxes, installed by symlinking into `~/.claude`.
+A custom `statusline.sh` for Claude Code that renders a two-line, box-drawing status line showing the session at a glance: model name and reasoning effort, current directory, rich git status (branch, dirty state, sync state, ahead/behind, stashes) on line one; context-window usage and 5-hour / weekly rate-limit usage with the local clock times they reset at on line two. It must work identically on the user's host machine (macOS) and inside Docker Sandboxes, installed by symlinking into `~/.claude`.
 
 **Core Value:** One glance at the terminal tells you everything about the session: which model at which effort, where you are in git, and how much context and rate limit you have left before things reset.
 
@@ -37,7 +37,7 @@ A custom `statusline.sh` for Claude Code that renders a two-line, box-drawing st
 |---------|---------|---------|-------------|
 | curl | any | Fetch model-specific weekly limit (the `f()` segment) from the OAuth usage API | Only for the `f()` segment — everything else comes from stdin. Must be cached + fail-silent (see below) |
 | `security` (macOS built-in) | — | Read OAuth token from Keychain on the macOS host | macOS host stores credentials in Keychain item `"Claude Code-credentials"` (verified: `~/.claude/.credentials.json` is **absent** on this host, Keychain item exists) |
-| `date +%s` + shell arithmetic | POSIX | Reset countdowns | `resets_at` is Unix epoch seconds; `$((resets_at - $(date +%s)))` then manual d/h/m formatting is 100% portable. **Never** use `date -d` (GNU-only) or `date -r` (BSD-only) |
+| `date '+%s %z'` + shell arithmetic | POSIX | Reset clock times | One call yields both the epoch and the local UTC offset (`%z` -> `±hhmm`, parsed with a `case` shape guard and `10#` base-10 expansion). `resets_at` is Unix epoch seconds, so `(resets_at + offset)` floor-divided by 86400 gives the local day number and the seconds into that day — `HH:MM`, plus a weekday from `(day + 4) % 7` — rendering `5h 50% 14:50` / `Week 15% Mon 21:10` — all in pure arithmetic and 100% portable. **Never** use `date -d` (GNU-only) or `date -r` (BSD-only) |
 
 ### Development Tools
 
@@ -70,7 +70,7 @@ A custom `statusline.sh` for Claude Code that renders a two-line, box-drawing st
 - **Multi-line: confirmed.** Each `echo`/`printf` line renders as its own row — the two-line `╭─`/`╰─` layout is directly supported (box-drawing chars are plain UTF-8 output).
 - Use `printf '%b'` (or `$'\033[...]'` literals) instead of `echo -e` — docs explicitly recommend this for cross-shell escape reliability.
 - **Update model:** runs on session start/resume, new assistant message, `/compact` end, permission-mode change, vim toggle; debounced 300 ms; **in-flight scripts get cancelled** by newer triggers — another reason the script must be fast.
-- **`refreshInterval` setting:** re-runs the script every N seconds (min 1) even when idle. **Recommended for this project** (e.g. `30`–`60`) because the reset countdowns are time-based and would otherwise freeze while the session idles.
+- **`refreshInterval` setting:** re-runs the script every N seconds (min 1) even when idle. **Recommended for this project** (e.g. `30`–`60`) because the reset display is time-relative — a reset that passes must flip to `now`, and at local midnight a same-day time must gain its weekday prefix — and both would otherwise freeze while the session idles.
 - Terminal width: read `$COLUMNS` (set by Claude Code ≥2.1.153); `tput cols` does not work (stdout is captured, no tty).
 - `statusLine.padding` (optional int) controls extra indent; script must be executable (`chmod +x`) and print to stdout; non-zero exit or empty output blanks the line.
 - Workspace trust must be accepted or the statusline silently never runs.
